@@ -3,6 +3,7 @@ import time
 import logging
 import cv2
 import json
+import base64
 from ultralytics import YOLO
 # =========================
 # CLEAN LOGGING
@@ -14,13 +15,18 @@ logging.getLogger("ultralytics").setLevel(logging.ERROR)
 # =========================
 MODEL_PATH = "yolov8n.pt"
 RTSP_URL = "rtsp://192.168.192.133:8554/cam"
-CAMERA_ID = "cam_01"
+CAMERA_ID = "cam_1"
 
 FALL_RATIO_THRESHOLD = 1.2
 FALL_TIME_THRESHOLD = 2
 
 MOVEMENT_THRESHOLD = 150
 ATTACK_TIME_THRESHOLD = 1.5
+
+OUTPUT_DIR = "events"
+
+if not os.path.exists(OUTPUT_DIR):
+    os.makedirs(OUTPUT_DIR)
 
 # =========================
 # STATES
@@ -43,9 +49,28 @@ last_saved_event = None
 model = YOLO(MODEL_PATH, verbose=False)
 
 # =========================
+# SAVE IMAGE (VISIBLE)
+# =========================
+
+def save_frame_image(frame):
+    timestamp = time.strftime("%Y%m%d_%H%M%S", time.localtime())
+    filename = f"{OUTPUT_DIR}/event_{timestamp}.jpg"
+
+    cv2.imwrite(filename, frame)
+
+    return filename
+
+# =========================
+# ENCODE
+# =========================
+def encode_frame(frame):
+    _, buffer = cv2.imencode(".jpg", frame)
+    jpg_as_text = base64.b64encode(buffer).decode("utf-8")
+    return jpg_as_text
+# =========================
 # SAVE JSON
 # =========================
-def save_event(event, value):
+def save_event(event, value, frame):
     global last_saved_event
 
     if event == last_saved_event:
@@ -53,12 +78,18 @@ def save_event(event, value):
 
     last_saved_event = event
 
+    image_b64 = None
+
+    if event != "NORMAL":
+        image_b64 = encode_frame(frame)
+
     data = {
         "camera_id": CAMERA_ID,
         "event": event,
         "active": event != "NORMAL",
-        "timestamp": time.time(),
-        "people": value
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime()),
+        "people": value,
+        "image": image_b64
     }
 
     with open("event.json", "w") as f:
@@ -210,7 +241,7 @@ def run():
         boxes = get_people(frame)
         event, value = detect_event(boxes, frame)
 
-        save_event(event, value)
+        save_event(event, value, frame)
 
         annotated = model(frame)[0].plot()
 

@@ -1,7 +1,8 @@
 {
-    "camera_id": "cam_01",
+    "camera_id": "cam_1",
     "event": "NORMAL",
     "active": false,
-    "timestamp": 1777072624.497003,
-    "people": 0
+    "timestamp": "2026-04-25T02:56:28",
+    "people": 0,
+    "image": null
 }
