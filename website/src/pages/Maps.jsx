@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { GoogleMap, useLoadScript, MarkerF, InfoWindowF, CircleF } from '@react-google-maps/api';
-import { ALERT_TYPES } from '../App'; // Beimportáljuk a színeket és szövegeket
+import { ALERT_TYPES, CAMERAS } from '../App'; 
 import './Maps.css';
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAKGpw5JBe1ZMrS6L2VYSahX29pvnYOKLs";
@@ -12,11 +12,10 @@ const AUTHORITIES = [
   { id: 'pol_4', type: 'police', name: 'Secția 3 Poliție', lat: 46.7645, lng: 23.6058, address: 'Str. Septimiu Albini' },
   { id: 'amb_1', type: 'ambulance', name: 'Ambulanța Cluj', lat: 46.7785, lng: 23.5866, address: 'Str. Horea 40' },
   { id: 'amb_2', type: 'ambulance', name: 'UPU SMURD', lat: 46.7669, lng: 23.5828, address: 'Str. Clinicilor 3-5' },
-  { id: 'fire_1', type: 'fire department', name: 'ISU Cluj', lat: 46.7735, lng: 23.6015, address: 'B-dul 21 Decembrie 1989' },
-  { id: 'fire_2', type: 'fire department', name: 'Detașamentul 2 Pompieri', lat: 46.7544, lng: 23.5558, address: 'Mănăștur / Colina' }
+  { id: 'fire_1', type: 'fire', name: 'ISU Cluj (Főkapitányság)', lat: 46.7735, lng: 23.6015, address: 'B-dul 21 Decembrie 1989' },
+  { id: 'fire_2', type: 'fire', name: 'Detașamentul 2 Pompieri', lat: 46.7544, lng: 23.5558, address: 'Mănăștur / Colina' }
 ];
 
-const CAMERA_STATION = { id: 'cam_1', name: 'Smart_Camera_1', lat: 46.7825, lng: 23.6051, address: 'Str. Henri Barbusse 44' };
 const mapCenter = { lat: 46.7700, lng: 23.5900 };
 
 const mapStyles = [
@@ -36,8 +35,7 @@ const ICONS = {
   camera_alert: "http://maps.google.com/mapfiles/ms/icons/red-dot.png" 
 };
 
-// A Maps mostantól megkapja propként az activeAlert-et az App.jsx-ből!
-export default function Maps({ activeAlert }) {
+export default function Maps({ activeAlert, alertedCamera, onCameraClick }) {
   const [selectedPin, setSelectedPin] = useState(null);
 
   const { isLoaded, loadError } = useLoadScript({
@@ -50,11 +48,10 @@ export default function Maps({ activeAlert }) {
     zoomControl: true,
   }), []);
 
-  // Ez a React varázslat magától megnyitja/bezárja a buborékot, ha jön a riasztásjel az App-tól
   useEffect(() => {
-    if (activeAlert) setSelectedPin(CAMERA_STATION);
+    if (activeAlert && alertedCamera) setSelectedPin(alertedCamera);
     else setSelectedPin(null);
-  }, [activeAlert]);
+  }, [activeAlert, alertedCamera]);
 
   if (loadError) return <div style={{color: 'white', padding: '20px'}}>Error loading map.</div>;
   if (!isLoaded) return <div style={{color: 'white', padding: '20px'}}>Loading map...</div>;
@@ -63,6 +60,7 @@ export default function Maps({ activeAlert }) {
     <div className="map-container-wrapper">
       <GoogleMap mapContainerStyle={{ width: '100%', height: '100%' }} center={mapCenter} zoom={13} options={options}>
         
+        {/* Hatóságok (rendőr, mentő, tűzoltó) rajzolása */}
         {AUTHORITIES.map((station) => (
           <MarkerF
             key={station.id}
@@ -72,16 +70,31 @@ export default function Maps({ activeAlert }) {
           />
         ))}
 
-        <MarkerF
-          position={{ lat: CAMERA_STATION.lat, lng: CAMERA_STATION.lng }}
-          icon={{ url: activeAlert ? ICONS.camera_alert : ICONS.camera_normal, scaledSize: new window.google.maps.Size(45, 45) }}
-          onClick={() => setSelectedPin(CAMERA_STATION)}
-        />
+        {/* AZ ÖSSZES KAMERA RAJZOLÁSA CIKLUSSAL */}
+        {CAMERAS.map((cam) => {
+          // Ellenőrizzük, hogy ez a kamera riaszt-e éppen
+          const isAlerting = activeAlert && alertedCamera && alertedCamera.id === cam.id;
+          return (
+            <MarkerF
+              key={cam.id}
+              position={{ lat: cam.lat, lng: cam.lng }}
+              icon={{ 
+                url: isAlerting ? ICONS.camera_alert : ICONS.camera_normal, 
+                scaledSize: new window.google.maps.Size(45, 45) 
+              }}
+              onClick={() => {
+                setSelectedPin(cam);
+                onCameraClick(cam); // Ez váltja át a bal oldali sávot!
+              }}
+            />
+          );
+        })}
 
-        {activeAlert && (
+        {/* Színes kör (Halo), csak a riasztó kamera körül */}
+        {activeAlert && alertedCamera && (
           <CircleF
             key={`halo_${activeAlert}`}
-            center={{ lat: CAMERA_STATION.lat, lng: CAMERA_STATION.lng }}
+            center={{ lat: alertedCamera.lat, lng: alertedCamera.lng }}
             radius={300} 
             options={{
               fillColor: ALERT_TYPES[activeAlert].colorHex,
@@ -94,15 +107,17 @@ export default function Maps({ activeAlert }) {
           />
         )}
 
+        {/* Információs buborék */}
         {selectedPin && (
           <InfoWindowF position={{ lat: selectedPin.lat, lng: selectedPin.lng }} onCloseClick={() => setSelectedPin(null)}>
             <div className="info-window">
               <h4>{selectedPin.name}</h4>
               <p>{selectedPin.address}</p>
               
-              {selectedPin.id === 'cam_1' && (
+              {/* Ha kamera, extra infók a riasztásról */}
+              {selectedPin.id.startsWith('cam_') && (
                 <div style={{ marginTop: '10px' }}>
-                  {activeAlert ? (
+                  {activeAlert && alertedCamera?.id === selectedPin.id ? (
                     <div className="alert-text">
                       <strong>DANGER ({ALERT_TYPES[activeAlert].labelText})</strong><br/>
                       {ALERT_TYPES[activeAlert].responderText}
