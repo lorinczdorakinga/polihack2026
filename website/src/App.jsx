@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Maps from './pages/Maps';
+import Maps from './pages/maps';
 import SideLogs from './pages/SideLogs';
 import PointLogs from './pages/PointLogs';
 import ControlPanel from './components/ControlPanel';
