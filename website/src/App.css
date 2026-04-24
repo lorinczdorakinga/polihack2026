@@ -1,0 +1,31 @@
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden; /* Eltünteti a felesleges görgetősávokat */
+}
+
+.app-layout {
+  display: flex;
+  flex-direction: row;
+  width: 100vw;
+  height: 100vh;
+  background-color: #121212;
+}
+
+.map-section {
+  flex: 1;
+  position: relative;
+  /* EZ A KÉT SOR A BOLONDBIZTOS MEGOLDÁS: */
+  max-width: calc(100vw - 350px); 
+  overflow: hidden; 
+  height: 100vh;
+}
+
+/* RESZPONZÍV: Ha a képernyő kisebb mint 800px (pl. tablet/telefon) */
+@media (max-width: 800px) {
+  .app-layout {
+    flex-direction: column-reverse; /* A térkép lesz felül, a log alul */
+  }
+}

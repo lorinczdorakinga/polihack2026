@@ -1,0 +1,12 @@
+.map-container-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative; /* absolute helyett, így a szülőhöz igazodik */
+  overflow: hidden;
+}
+
+.info-window { color: black; padding: 5px; font-family: sans-serif; }
+.info-window h4 { margin: 0 0 5px 0; font-size: 16px; }
+.info-window p { margin: 0; font-size: 13px; color: #555; }
+.alert-text { color: #d32f2f; font-size: 14px; }
+.ok-text { color: #388e3c; font-weight: bold; }
