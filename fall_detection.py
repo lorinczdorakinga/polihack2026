@@ -2,10 +2,11 @@ import os
 import time
 import logging
 import cv2
+import json
 from ultralytics import YOLO
 
 # =========================
-# 🔇 SILENCE YOLO SPAM
+# 🔇 CLEAN LOGGING
 # =========================
 os.environ["YOLO_VERBOSE"] = "False"
 logging.getLogger("ultralytics").setLevel(logging.ERROR)
@@ -15,94 +16,178 @@ logging.getLogger("ultralytics").setLevel(logging.ERROR)
 # =========================
 MODEL_PATH = "yolov8n.pt"
 RTSP_URL = "rtsp://192.168.192.133:8554/cam"
+CAMERA_ID = "cam_01"
 
 FALL_RATIO_THRESHOLD = 1.2
-FALL_PERSISTENCE_TIME = 10  # seconds
+FALL_TIME_THRESHOLD = 2
+
+MOVEMENT_THRESHOLD = 150
+ATTACK_TIME_THRESHOLD = 1.5
 
 # =========================
-# 🧠 STATE
+# 🧠 STATES
 # =========================
 class PersonState:
     def __init__(self):
-        self.last_state = "unknown"
-        self.last_change_time = time.time()
-        self.fallen = False
+        self.last_state = "standing"
+        self.last_time = time.time()
 
-state_memory = {}
+class MotionState:
+    def __init__(self):
+        self.last_box = None
+        self.attack_start = None
+
+person_state = {}
+motion_state = {}
+
+last_saved_event = None
 
 model = YOLO(MODEL_PATH, verbose=False)
 
+# =========================
+# 💾 SAVE JSON
+# =========================
+def save_event(event, value):
+    global last_saved_event
+
+    if event == last_saved_event:
+        return
+
+    last_saved_event = event
+
+    data = {
+        "camera_id": CAMERA_ID,
+        "event": event,
+        "active": event != "NORMAL",
+        "timestamp": time.time(),
+        "people": value
+    }
+
+    with open("event.json", "w") as f:
+        json.dump(data, f, indent=4)
 
 # =========================
-# 👁️ GET PERSON BOXES
+# 👁️ GET PEOPLE BOXES
 # =========================
-def get_person_boxes(frame):
+def get_people(frame):
     results = model(frame)
     boxes = []
 
     for r in results[0].boxes:
-        cls_id = int(r.cls[0])
-        label = model.names[cls_id]
-
-        if label != "person":
+        cls = int(r.cls[0])
+        if model.names[cls] != "person":
             continue
-
         boxes.append(r.xyxy[0].tolist())
 
     return boxes
 
-
 # =========================
-# 📐 FALL HEURISTIC
+# 📐 FALL CHECK
 # =========================
 def is_fall(box):
     x1, y1, x2, y2 = box
-
-    width = x2 - x1
-    height = y2 - y1
-
-    if height == 0:
+    w = x2 - x1
+    h = y2 - y1
+    if h == 0:
         return False
-
-    ratio = width / height
-
-    return ratio > FALL_RATIO_THRESHOLD
-
+    return (w / h) > FALL_RATIO_THRESHOLD
 
 # =========================
-# 🧠 FALL LOGIC ENGINE
+# 🔥 FIRE CHECK
 # =========================
-def detect_falls(boxes):
-    global state_memory
+def is_fire(frame):
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+    lower = (5, 150, 150)
+    upper = (25, 255, 255)
+
+    mask = cv2.inRange(hsv, lower, upper)
+    ratio = cv2.countNonZero(mask) / (frame.shape[0] * frame.shape[1])
+
+    return ratio > 0.06
+
+# =========================
+# 🧠 EVENT ENGINE
+# =========================
+def detect_event(boxes, frame):
+    global person_state, motion_state
 
     now = time.time()
     fall_count = 0
+    attack_count = 0
 
     for i, box in enumerate(boxes):
-        key = f"p{i}"
+        pid = f"p{i}"
 
-        if key not in state_memory:
-            state_memory[key] = PersonState()
+        if pid not in person_state:
+            person_state[pid] = PersonState()
 
-        person = state_memory[key]
+        if pid not in motion_state:
+            motion_state[pid] = MotionState()
 
-        if is_fall(box):
-            if person.last_state == "falling":
-                if now - person.last_change_time > FALL_PERSISTENCE_TIME:
-                    person.fallen = True
+        pstate = person_state[pid]
+        mstate = motion_state[pid]
+
+        x1, y1, x2, y2 = box
+        w = x2 - x1
+        h = y2 - y1
+        ratio = w / h if h != 0 else 0
+
+        # =====================
+        # FALL DETECTION
+        # =====================
+        if ratio > FALL_RATIO_THRESHOLD:
+            if pstate.last_state == "falling":
+                if now - pstate.last_time > FALL_TIME_THRESHOLD:
+                    fall_count += 1
             else:
-                person.last_state = "falling"
-                person.last_change_time = now
+                pstate.last_state = "falling"
+                pstate.last_time = now
         else:
-            person.last_state = "standing"
-            person.fallen = False
-            person.last_change_time = now
+            pstate.last_state = "standing"
+            pstate.last_time = now
 
-        if person.fallen:
-            fall_count += 1
+        # =====================
+        # ATTACK DETECTION
+        # =====================
+        if mstate.last_box is not None:
+            dx = abs(box[0] - mstate.last_box[0])
+            dy = abs(box[1] - mstate.last_box[1])
 
-    return fall_count
+            movement = dx + dy
 
+            if movement > MOVEMENT_THRESHOLD:
+                if mstate.attack_start is None:
+                    mstate.attack_start = now
+                elif now - mstate.attack_start > ATTACK_TIME_THRESHOLD:
+                    attack_count += 1
+            else:
+                mstate.attack_start = None
+        else:
+            mstate.attack_start = None
+
+        mstate.last_box = box
+
+    # =====================
+    # FIRE CHECK
+    # =====================
+    fire = is_fire(frame)
+
+    # crowd suppression
+    if len(boxes) > 4:
+        attack_count = 0
+
+    # =====================
+    # FINAL DECISION
+    # =====================
+    if fire:
+        return "FIRE_EVENT", 1
+    elif fall_count > 0:
+        return "HEALTH_EMERGENCY", fall_count
+    elif attack_count >= 3:
+        return "POSSIBLE_ATTACK", attack_count
+    else:
+        return "NORMAL", 0
 
 # =========================
 # 🎥 MAIN LOOP
@@ -112,10 +197,10 @@ def run():
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
     if not cap.isOpened():
-        print("❌ Cannot open RTSP stream")
+        print("❌ Cannot open stream")
         return
 
-    print("✅ Smart Fall Detection Running...")
+    print("✅ Smart Emergency System Running...")
 
     while True:
         ret, frame = cap.read()
@@ -124,13 +209,11 @@ def run():
             print("⚠️ Frame not received")
             continue
 
-        # YOLO detection
-        boxes = get_person_boxes(frame)
+        boxes = get_people(frame)
+        event, value = detect_event(boxes, frame)
 
-        # fall detection
-        falls = detect_falls(boxes)
+        save_event(event, value)
 
-        # visualization
         annotated = model(frame)[0].plot()
 
         cv2.putText(
@@ -145,7 +228,7 @@ def run():
 
         cv2.putText(
             annotated,
-            f"Falls: {falls}",
+            f"EVENT: {event}",
             (20, 80),
             cv2.FONT_HERSHEY_SIMPLEX,
             1,
@@ -153,22 +236,18 @@ def run():
             3
         )
 
-        # =========================
-        # 🧾 CLEAN TERMINAL OUTPUT
-        # =========================
-        if falls > 0:
-            print(f"🚨 FALL DETECTED | count={falls}")
+        if event != "NORMAL":
+            print(f"🚨 {event} | value={value}")
         else:
             print(f"OK | people={len(boxes)}")
 
-        cv2.imshow("Smart Fall System", annotated)
+        cv2.imshow("Smart Emergency System", annotated)
 
         if cv2.waitKey(1) == 27:
             break
 
     cap.release()
     cv2.destroyAllWindows()
-
 
 # =========================
 # 🚀 RUN
