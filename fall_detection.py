@@ -4,15 +4,13 @@ import logging
 import cv2
 import json
 from ultralytics import YOLO
-
 # =========================
-# 🔇 CLEAN LOGGING
+# CLEAN LOGGING
 # =========================
 os.environ["YOLO_VERBOSE"] = "False"
 logging.getLogger("ultralytics").setLevel(logging.ERROR)
-
 # =========================
-# 🔧 CONFIG
+# CONFIG
 # =========================
 MODEL_PATH = "yolov8n.pt"
 RTSP_URL = "rtsp://192.168.192.133:8554/cam"
@@ -25,7 +23,7 @@ MOVEMENT_THRESHOLD = 150
 ATTACK_TIME_THRESHOLD = 1.5
 
 # =========================
-# 🧠 STATES
+# STATES
 # =========================
 class PersonState:
     def __init__(self):
@@ -45,7 +43,7 @@ last_saved_event = None
 model = YOLO(MODEL_PATH, verbose=False)
 
 # =========================
-# 💾 SAVE JSON
+# SAVE JSON
 # =========================
 def save_event(event, value):
     global last_saved_event
@@ -67,7 +65,7 @@ def save_event(event, value):
         json.dump(data, f, indent=4)
 
 # =========================
-# 👁️ GET PEOPLE BOXES
+# GET PEOPLE BOXES
 # =========================
 def get_people(frame):
     results = model(frame)
@@ -82,7 +80,7 @@ def get_people(frame):
     return boxes
 
 # =========================
-# 📐 FALL CHECK
+# FALL CHECK
 # =========================
 def is_fall(box):
     x1, y1, x2, y2 = box
@@ -93,7 +91,7 @@ def is_fall(box):
     return (w / h) > FALL_RATIO_THRESHOLD
 
 # =========================
-# 🔥 FIRE CHECK
+# FIRE CHECK
 # =========================
 def is_fire(frame):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -107,7 +105,7 @@ def is_fire(frame):
     return ratio > 0.06
 
 # =========================
-# 🧠 EVENT ENGINE
+# EVENT ENGINE
 # =========================
 def detect_event(boxes, frame):
     global person_state, motion_state
@@ -190,7 +188,7 @@ def detect_event(boxes, frame):
         return "NORMAL", 0
 
 # =========================
-# 🎥 MAIN LOOP
+# MAIN LOOP
 # =========================
 def run():
     cap = cv2.VideoCapture(RTSP_URL, cv2.CAP_FFMPEG)
@@ -250,7 +248,7 @@ def run():
     cv2.destroyAllWindows()
 
 # =========================
-# 🚀 RUN
+# RUN
 # =========================
 if __name__ == "__main__":
     run()
