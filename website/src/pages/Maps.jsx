@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { GoogleMap, useLoadScript, MarkerF, InfoWindowF, CircleF } from '@react-google-maps/api';
-import { ALERT_TYPES, CAMERAS } from '../App'; 
 import configData from '../resources/config.json'; // ÚJ: A JSON fájl beolvasása
 import './Maps.css';
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAKGpw5JBe1ZMrS6L2VYSahX29pvnYOKLs";
 
+// 1. MINDENT A JSON-BŐL OLVASUNK BE! (Az import { ... } from '../App' törölve lett!)
 const { ALERT_TYPES, CAMERAS, AUTHORITIES, MAP_CENTER } = configData;
 
 const mapStyles = [
@@ -48,9 +48,8 @@ export default function Maps({ activeAlert, alertedCamera, onCameraClick }) {
 
   return (
     <div className="map-container-wrapper">
-      <GoogleMap mapContainerStyle={{ width: '100%', height: '100%' }} center={mapCenter} zoom={13} options={options}>
+      <GoogleMap mapContainerStyle={{ width: '100%', height: '100%' }} center={MAP_CENTER} zoom={13} options={options}>
         
-        {/* Hatóságok (rendőr, mentő, tűzoltó) rajzolása */}
         {AUTHORITIES.map((station) => (
           <MarkerF
             key={station.id}
@@ -60,9 +59,7 @@ export default function Maps({ activeAlert, alertedCamera, onCameraClick }) {
           />
         ))}
 
-        {/* AZ ÖSSZES KAMERA RAJZOLÁSA CIKLUSSAL */}
         {CAMERAS.map((cam) => {
-          // Ellenőrizzük, hogy ez a kamera riaszt-e éppen
           const isAlerting = activeAlert && alertedCamera && alertedCamera.id === cam.id;
           return (
             <MarkerF
@@ -74,13 +71,12 @@ export default function Maps({ activeAlert, alertedCamera, onCameraClick }) {
               }}
               onClick={() => {
                 setSelectedPin(cam);
-                onCameraClick(cam); // Ez váltja át a bal oldali sávot!
+                onCameraClick(cam);
               }}
             />
           );
         })}
 
-        {/* Színes kör (Halo), csak a riasztó kamera körül */}
         {activeAlert && alertedCamera && (
           <CircleF
             key={`halo_${activeAlert}`}
@@ -97,14 +93,12 @@ export default function Maps({ activeAlert, alertedCamera, onCameraClick }) {
           />
         )}
 
-        {/* Információs buborék */}
         {selectedPin && (
           <InfoWindowF position={{ lat: selectedPin.lat, lng: selectedPin.lng }} onCloseClick={() => setSelectedPin(null)}>
             <div className="info-window">
               <h4>{selectedPin.name}</h4>
               <p>{selectedPin.address}</p>
               
-              {/* Ha kamera, extra infók a riasztásról */}
               {selectedPin.id.startsWith('cam_') && (
                 <div style={{ marginTop: '10px' }}>
                   {activeAlert && alertedCamera?.id === selectedPin.id ? (

@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import Maps from './pages/maps';
+import { useWebSocket } from './resources/useWebsocket'; 
+import Maps from './pages/Maps';
 import SideLogs from './pages/SideLogs';
 import PointLogs from './pages/PointLogs';
 import ControlPanel from './components/ControlPanel';
-import { useWebSocket } from './resources/useWebsocket';
 import IncidentModal from './components/IncidentModal';
-import configData from './resources/config.json'; // ÚJ: A JSON fájl beolvasása
+import configData from './resources/config.json';
 import './App.css';
 
-export const { ALERT_TYPES, CAMERAS } = configData;
+// 1. MINDENT A JSON-BŐL OLVASUNK BE!
+const { ALERT_TYPES, CAMERAS } = configData;
 
 function App() {
   const [logs, setLogs] = useState([
@@ -17,16 +18,48 @@ function App() {
   ]);
   
   const [activeAlert, setActiveAlert] = useState(null);
-  const [alertedCamera, setAlertedCamera] = useState(null); // Melyik kamera riaszt?
-  const [selectedSidebarCamera, setSelectedSidebarCamera] = useState(null); // Melyik kamera adatlapja van nyitva?
+  const [alertedCamera, setAlertedCamera] = useState(null);
+  const [selectedSidebarCamera, setSelectedSidebarCamera] = useState(null);
   const [selectedLogForModal, setSelectedLogForModal] = useState(null);
 
+  // WEBSOCKET CSATLAKOZÁS
   const { data: incomingData, isConnected } = useWebSocket('ws://localhost:5000/ws');
 
+  useEffect(() => {
+    if (!incomingData) return; 
+
+    const targetCam = CAMERAS.find(cam => cam.id === incomingData.camera_id) || CAMERAS[0];
+
+    if (incomingData.active === true && incomingData.event !== "NORMAL") {
+      const incomingAlertType = incomingData.event; 
+
+      setActiveAlert(prevAlert => {
+        if (prevAlert !== incomingAlertType) {
+          setAlertedCamera(targetCam);
+          const newLog = {
+            id: incomingData.timestamp || Date.now(),
+            type: incomingAlertType,
+            time: new Date().toLocaleTimeString('en-US', { hour12: false }),
+            location: targetCam.name,
+            message: `${ALERT_TYPES[incomingAlertType].labelText} (People detected: ${incomingData.people})`,
+            title: `${ALERT_TYPES[incomingAlertType].labelText} Incident`,
+            description: "Automated AI trigger activated. No detailed visual analysis attached yet.",
+            image: incomingData.image_b64 ? `data:image/jpeg;base64,${incomingData.image_b64}` : null
+          };
+          setLogs(prevLogs => [newLog, ...prevLogs]);
+        }
+        return incomingAlertType;
+      });
+
+    } else if (incomingData.active === false || incomingData.event === "NORMAL") {
+      setActiveAlert(null);
+      setAlertedCamera(null);
+    }
+  }, [incomingData]);
+
+  // SZIMULÁCIÓ (Control Panelből)
   const handleSimulateAlert = (type) => {
-    // Ha a felhasználó épp néz egy kamerát, akkor az riaszt. Ha nem, akkor az 1-es kamera.
     const targetCam = selectedSidebarCamera || CAMERAS[0]; 
-    
     setActiveAlert(type);
     setAlertedCamera(targetCam);
     
@@ -36,7 +69,6 @@ function App() {
       time: new Date().toLocaleTimeString('en-US', { hour12: false }),
       location: targetCam.name,
       message: ALERT_TYPES[type].labelText,
-      // Felkészítés a bejövő JSON adatokra:
       title: `${ALERT_TYPES[type].labelText} Incident`, 
       description: `Automated AI trigger activated. No detailed visual analysis attached yet.`,
       image: null
@@ -49,54 +81,20 @@ function App() {
     setAlertedCamera(null);
   };
 
-  useEffect(() => {
-    if (!incomingData) return;
-    const targetCam = CAMERAS.find(cam => cam.id === incomingData.camera_id) || CAMERAS[0];
-    // HA VESZÉLY VAN
-    if (incomingData.active === true && incomingData.event !== "NORMAL") {
-      
-      const incomingAlertType = incomingData.event.toUpperCase();
-      setActiveAlert(prevAlert => {
-        // Csak akkor hozunk létre új logot, ha ez egy ÚJ riasztás
-        if (prevAlert !== incomingAlertType) {
-          setAlertedCamera(targetCam);
-          
-          const newLog = {
-            id: incomingData.timestamp || Date.now(),
-            type: incomingAlertType,
-            time: new Date().toLocaleTimeString('en-US', { hour12: false }),
-            location: targetCam.name,
-            // Hozzáadjuk az emberek számát is a JSON-ből
-            message: `${ALERT_TYPES[incomingAlertType].labelText} (People detected: ${incomingData.people})`
-          };
-          setLogs(prevLogs => [newLog, ...prevLogs]);
-        }
-        return incomingAlertType;
-      });
-
-    } 
-    // HA VÉGE A VESZÉLYNEK
-    else if (incomingData.active === false || incomingData.event === "NORMAL") {
-      setActiveAlert(null);
-      setAlertedCamera(null);
-    }
-  }, [incomingData]);
-
   return (
     <div className="app-layout">
       
-      {/* DINAMIKUS BAL OLDALI SÁV CSERE */}
       {selectedSidebarCamera ? (
         <PointLogs 
           camera={selectedSidebarCamera} 
           logs={logs} 
           onBack={() => setSelectedSidebarCamera(null)}
-          onLogClick={(log) => setSelectedLogForModal(log)} /* <-- Átadjuk az eseményt! */
+          onLogClick={(log) => setSelectedLogForModal(log)} 
         />
       ) : (
         <SideLogs 
           logs={logs} 
-          onLogClick={(log) => setSelectedLogForModal(log)} /* <-- Átadjuk az eseményt! */
+          onLogClick={(log) => setSelectedLogForModal(log)} 
         />
       )}
       
@@ -114,6 +112,7 @@ function App() {
         onCancel={handleCancelAlert}
         alertTypes={ALERT_TYPES}
       />
+
       <IncidentModal 
         log={selectedLogForModal} 
         onClose={() => setSelectedLogForModal(null)} 
