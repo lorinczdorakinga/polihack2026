@@ -45,9 +45,10 @@ async def handle_connection(websocket):
         print("⚠️ A kliens (React) lecsatlakozott. Várakozás új kapcsolatra...")
 
 async def main():
-    print("🚀 WebSocket szerver indul: ws://localhost:5000")
-    async with websockets.serve(handle_connection, "localhost", 5000):
-        await asyncio.Future() 
+    print("🚀 WebSocket szerver indul: ws://localhost:8080")
+    # Itt is átírjuk 8080-ra!
+    async with websockets.serve(handle_connection, "localhost", 8080):
+        await asyncio.Future()
 
 if __name__ == "__main__":
     asyncio.run(main())

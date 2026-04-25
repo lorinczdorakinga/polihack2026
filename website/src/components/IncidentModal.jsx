@@ -1,20 +1,25 @@
-import React, { useState } from 'react';
+import React from 'react';
 import './IncidentModal.css';
 
-export default function IncidentModal({ log, onClose }) {
-  const [status, setStatus] = useState('pending');
-
+// Hozzáadtuk az onUpdateStatus prop-ot!
+export default function IncidentModal({ log, onClose, onUpdateStatus }) {
+  
   if (!log) return null;
 
+  // A státuszt most már magából a log objektumból olvassuk ki
+  const status = log.status || 'pending'; 
+
   const handleApprove = () => {
-    setStatus('approved');
-    console.log("Riasztás megerősítve! Hatóságok indítása...");
+    // Frissítjük a fő listát az App.jsx-en keresztül
+    onUpdateStatus(log.id, 'approved');
+    console.log(`Riasztás (${log.id}) megerősítve! Hatóságok indítása...`);
     setTimeout(onClose, 1500);
   };
 
   const handleDecline = () => {
-    setStatus('declined');
-    console.log("Téves riasztás elutasítva.");
+    // Frissítjük a fő listát az App.jsx-en keresztül
+    onUpdateStatus(log.id, 'declined');
+    console.log(`Riasztás (${log.id}) elutasítva.`);
     setTimeout(onClose, 1500);
   };
 
@@ -35,11 +40,9 @@ export default function IncidentModal({ log, onClose }) {
           {log.description || "Review the live footage below to verify the AI's detection."}
         </div>
 
-        {/* ÉLŐ STREAM VAGY KÉP MEGJELENÍTÉSE */}
         <div className="modal-media-container" style={{ marginBottom: '20px' }}>
           {log.stream_url ? (
             <div style={{ position: 'relative' }}>
-              {/* Ez játssza le a kamerád nyers MJPEG streamjét! */}
               <img 
                 src={log.stream_url} 
                 alt="Live Camera Feed" 
@@ -77,7 +80,6 @@ export default function IncidentModal({ log, onClose }) {
           </div>
         )}
 
-        {/* VISSZAJELZÉS */}
         {status === 'approved' && (
           <div style={{ padding: '15px', backgroundColor: '#2e7d32', color: 'white', textAlign: 'center', borderRadius: '4px', fontWeight: 'bold' }}>
             ✓ Units dispatched successfully.

@@ -34,11 +34,11 @@ export default function PointLogs({ camera, logs, onBack, onLogClick }) {
         ) : (
           cameraLogs.map(log => (
             <div 
-              key={log.id} 
-              className={`log-item ${log.type}`}
-              onClick={() => onLogClick(log)} /* <-- KATTINTÁS ESEMÉNY! */
-              style={{ cursor: 'pointer' }}
-            >
+            key={log.id} 
+            className={`log-item ${log.type} ${log.isNew ? 'new-alert' : ''}`} /* <-- EZ VÁLTOZOTT */
+            onClick={() => onLogClick(log)} 
+            style={{ cursor: 'pointer' }} 
+          >
               <div className="log-title">{log.title || 'Incident Report'}</div>
               <div className="log-description">{log.description || 'The AI system detected an anomaly. Waiting for detailed description...'}</div>
             </div>
