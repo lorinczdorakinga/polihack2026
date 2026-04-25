@@ -11,16 +11,17 @@ async def handle_connection(websocket):
         print("⏳ Várakozás 1 másodpercet a riasztás előtt...")
         await asyncio.sleep(1)
         
-        print("🔥 Riasztás (FIRE_EVENT) szimulálása...")
+        print("🔥 Riasztás (POSSIBLE_ATTACK) szimulálása...")
         
         # 1. Összeállítjuk a JSON adatot
         alert_data = {
             "camera_id": "cam_1",
-            "event": "FIRE_EVENT",
+            "event": "POSSIBLE_ATTACK",
             "active": True,
             "timestamp": time.time(),
             "people": 2,
-            "image_b64": "" 
+            "image_b64": "",
+            "stream_url": "http://192.168.54.252/stream" # <-- EZT ADJUK HOZZÁ
         }
         
         # 2. EMAIL KÜLDÉSE
@@ -44,9 +45,10 @@ async def handle_connection(websocket):
         print("⚠️ A kliens (React) lecsatlakozott. Várakozás új kapcsolatra...")
 
 async def main():
-    print("🚀 WebSocket szerver indul: ws://localhost:5000")
-    async with websockets.serve(handle_connection, "localhost", 5000):
-        await asyncio.Future() 
+    print("🚀 WebSocket szerver indul: ws://localhost:8080")
+    # Itt is átírjuk 8080-ra!
+    async with websockets.serve(handle_connection, "localhost", 8080):
+        await asyncio.Future()
 
 if __name__ == "__main__":
     asyncio.run(main())

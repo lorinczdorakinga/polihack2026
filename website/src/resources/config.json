@@ -3,25 +3,25 @@
     "lat": 46.7700,
     "lng": 23.5900
   },
-  "ALERT_TYPES": {
-    "POSSIBLE_ATTACK": { "id": "POSSIBLE_ATTACK", "colorHex": "#0044cc", "labelText": "Possible Attack", "responderText": "Poliția en route to the scene." },
-    "HEALTH_EMERGENCY": { "id": "HEALTH_EMERGENCY", "colorHex": "#cc0000", "labelText": "Health Emergency", "responderText": "UPU SMURD en route to the scene." },
-    "FIRE_EVENT": { "id": "FIRE_EVENT", "colorHex": "#e67e22", "labelText": "Fire Alert", "responderText": "ISU Cluj en route to the scene." }
-  },
   "CAMERAS": [
-    { "id": "cam_1", "name": "Smart_Camera_1", "lat": 46.7825, "lng": 23.6051, "address": "Str. Henri Barbusse 44", "contact": "+40 711 111 111" },
-    { "id": "cam_2", "name": "Smart_Camera_2", "lat": 46.7725, "lng": 23.6265, "address": "Str. Alexandru Vaida Voevod 53", "contact": "+40 722 222 222" },
-    { "id": "cam_3", "name": "Smart_Camera_3", "lat": 46.7693, "lng": 23.5898, "address": "Piața Unirii 1", "contact": "+40 733 333 333" },
-    { "id": "cam_4", "name": "Smart_Camera_4", "lat": 46.7684, "lng": 23.5768, "address": "Parcul Central", "contact": "+40 744 444 444" }
+    { "id": "cam_1", "name": "Smart_Camera_1", "lat": 46.7825, "lng": 23.6051, "address": "Str. Henri Barbusse 44", "contact": "+40 711 111 111", "stream_url": "http://192.168.54.252/stream" },
+    { "id": "cam_2", "name": "Smart_Camera_2", "lat": 46.7725, "lng": 23.6265, "address": "Str. Alexandru Vaida Voevod 53", "contact": "+40 722 222 222", "stream_url": "https://via.placeholder.com/600x400?text=Camera+2+Offline" },
+    { "id": "cam_3", "name": "Smart_Camera_3", "lat": 46.7693, "lng": 23.5898, "address": "Piața Unirii 1", "contact": "+40 733 333 333", "stream_url": "https://via.placeholder.com/600x400?text=Camera+3+Offline" },
+    { "id": "cam_4", "name": "Smart_Camera_4", "lat": 46.7684, "lng": 23.5768, "address": "Parcul Central", "contact": "+40 744 444 444", "stream_url": "https://via.placeholder.com/600x400?text=Camera+4+Offline" }
   ],
+  "ALERT_TYPES": {
+    "POSSIBLE_ATTACK": { "id": "POSSIBLE_ATTACK", "colorHex": "#0044cc", "labelText": "Possible Attack", "responderText": "Law enforcement unit requested." },
+    "HEALTH_EMERGENCY": { "id": "HEALTH_EMERGENCY", "colorHex": "#cc0000", "labelText": "Health Emergency", "responderText": "Medical response unit requested." },
+    "FIRE_EVENT": { "id": "FIRE_EVENT", "colorHex": "#e67e22", "labelText": "Fire Alert", "responderText": "Fire department unit requested." }
+  },
   "AUTHORITIES": [
-    { "id": "pol_1", "type": "police", "name": "Poliția Municipiului", "lat": 46.7758, "lng": 23.5855, "address": "Str. Decebal 26" },
-    { "id": "pol_2", "type": "police", "name": "Secția 1 Poliție", "lat": 46.7664, "lng": 23.5815, "address": "Str. Clinicilor" },
-    { "id": "pol_3", "type": "police", "name": "Secția 2 Poliție", "lat": 46.7709, "lng": 23.6190, "address": "Str. Albac 15" },
-    { "id": "pol_4", "type": "police", "name": "Secția 3 Poliție", "lat": 46.7645, "lng": 23.6058, "address": "Str. Septimiu Albini" },
-    { "id": "amb_1", "type": "ambulance", "name": "Ambulanța Cluj", "lat": 46.7785, "lng": 23.5866, "address": "Str. Horea 40" },
-    { "id": "amb_2", "type": "ambulance", "name": "UPU SMURD", "lat": 46.7669, "lng": 23.5828, "address": "Str. Clinicilor 3-5" },
-    { "id": "fire_1", "type": "fire", "name": "ISU Cluj (Főkapitányság)", "lat": 46.7735, "lng": 23.6015, "address": "B-dul 21 Decembrie 1989" },
-    { "id": "fire_2", "type": "fire", "name": "Detașamentul 2 Pompieri", "lat": 46.7544, "lng": 23.5558, "address": "Mănăștur / Colina" }
+    { "id": "pol_1", "type": "police", "name": "Central Police Headquarters", "lat": 46.7758, "lng": 23.5855, "address": "Str. Decebal 26" },
+    { "id": "pol_2", "type": "police", "name": "Precinct 1 Police Station", "lat": 46.7664, "lng": 23.5815, "address": "Str. Clinicilor" },
+    { "id": "pol_3", "type": "police", "name": "Precinct 2 Police Station", "lat": 46.7709, "lng": 23.6190, "address": "Str. Albac 15" },
+    { "id": "pol_4", "type": "police", "name": "Precinct 3 Police Station", "lat": 46.7645, "lng": 23.6058, "address": "Str. Septimiu Albini" },
+    { "id": "amb_1", "type": "ambulance", "name": "Cluj General Ambulance", "lat": 46.7785, "lng": 23.5866, "address": "Str. Horea 40" },
+    { "id": "amb_2", "type": "ambulance", "name": "UPU SMURD Rapid Response", "lat": 46.7669, "lng": 23.5828, "address": "Str. Clinicilor 3-5" },
+    { "id": "fire_1", "type": "fire", "name": "ISU Cluj Main Firehouse", "lat": 46.7735, "lng": 23.6015, "address": "B-dul 21 Decembrie 1989" },
+    { "id": "fire_2", "type": "fire", "name": "Fire Detachment 2", "lat": 46.7544, "lng": 23.5558, "address": "Mănăștur / Colina" }
   ]
 }

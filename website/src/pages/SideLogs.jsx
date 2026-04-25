@@ -27,7 +27,7 @@ export default function SideLogs({ logs, onLogClick }) {
         {filteredLogs.map(log => (
           <div 
             key={log.id} 
-            className={`log-item ${log.type}`}
+            className={`log-item ${log.type} ${log.isNew ? 'new-alert' : ''}`} /* <-- EZ VÁLTOZOTT */
             onClick={() => onLogClick(log)} 
             style={{ cursor: 'pointer' }} 
           >
