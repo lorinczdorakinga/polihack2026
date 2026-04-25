@@ -17,9 +17,9 @@ export default function IncidentModal({ log, onClose }) {
 
         {/* Dinamikus hatósági jelvény */}
         <div className="badges-container">
-          {log.type === 'police' && <span className="incident-badge police">Police</span>}
-          {log.type === 'ambulance' && <span className="incident-badge ambulance">Ambulance</span>}
-          {log.type === 'fire' && <span className="incident-badge fire">Fire Station</span>}
+          {log.type === 'POSSIBLE_ATTACK' && <span className="incident-badge police">Police</span>}
+          {log.type === 'HEALTH_EMERGENCY' && <span className="incident-badge ambulance">Ambulance</span>}
+          {log.type === 'FIRE_EVENT' && <span className="incident-badge fire">Fire Station</span>}
         </div>
 
         {/* AI által generált Leírás */}

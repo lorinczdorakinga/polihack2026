@@ -1,6 +1,6 @@
 .sidebar-container {
   width: 350px;
-  flex-shrink: 0; /* <-- Ez akadályozza meg, hogy összenyomódjon! */
+  flex-shrink: 0; 
   height: 100vh;
   background-color: #1e1e1e;
   border-right: 2px solid #333;
@@ -35,9 +35,10 @@
   font-size: 14px;
 }
 
-.log-item.police { border-left-color: #0044cc; }
-.log-item.ambulance { border-left-color: #cc0000; }
-.log-item.fire { border-left-color: #e67e22; }
+/* 1. JAVÍTÁS: A listaelemek bal oldali csíkja (Csak az újak) */
+.log-item.POSSIBLE_ATTACK { border-left-color: #0044cc; }
+.log-item.HEALTH_EMERGENCY { border-left-color: #cc0000; }
+.log-item.FIRE_EVENT { border-left-color: #e67e22; }
 
 .log-time {
   font-size: 12px;
@@ -69,15 +70,15 @@
   transform: scale(1.05);
 }
 
-.filter-btn.police { background-color: #0044cc; }
-.filter-btn.ambulance { background-color: #cc0000; }
-.filter-btn.fire { background-color: #e67e22; }
+/* 2. JAVÍTÁS: A szűrőgombok háttérszínei (Ezek hiányoztak) */
+.filter-btn.POSSIBLE_ATTACK { background-color: #0044cc; }
+.filter-btn.HEALTH_EMERGENCY { background-color: #cc0000; }
+.filter-btn.FIRE_EVENT { background-color: #e67e22; }
 
-/* RESZPONZÍV OLDALSÁV KISEBB KÉPERNYŐN */
 @media (max-width: 800px) {
   .sidebar-container {
     width: 100%;
-    height: 40vh; /* Telefonon csak a képernyő alsó 40%-át foglalja el */
+    height: 40vh; 
     border-right: none;
     border-top: 2px solid #333;
   }

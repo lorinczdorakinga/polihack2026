@@ -27,6 +27,7 @@ const mapStyles = [
   { featureType: "water", elementType: "geometry", stylers: [{ color: "#000000" }] },
 ];
 
+// JAVÍTVA: Visszakapták a fizikai állomások a megfelelő kulcsokat
 const ICONS = {
   police: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
   ambulance: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",

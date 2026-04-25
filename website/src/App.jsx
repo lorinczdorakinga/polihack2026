@@ -8,9 +8,9 @@ import IncidentModal from './components/IncidentModal';
 import './App.css';
 
 export const ALERT_TYPES = {
-  police: { id: 'police', colorHex: "#0044cc", labelText: "Police intervention required", responderText: "Poliția en route to the scene." },
-  ambulance: { id: 'ambulance', colorHex: "#cc0000", labelText: "Injured person / Fall", responderText: "UPU SMURD en route to the scene." },
-  fire: { id: 'fire', colorHex: "#e67e22", labelText: "Fire / Smoke", responderText: "ISU Cluj en route to the scene." }
+  POSSIBLE_ATTACK: { id: 'POSSIBLE_ATTACK', colorHex: "#0044cc", labelText: "Possible Attack", responderText: "Poliția en route to the scene." },
+  HEALTH_EMERGENCY: { id: 'HEALTH_EMERGENCY', colorHex: "#cc0000", labelText: "Health Emergency", responderText: "UPU SMURD en route to the scene." },
+  FIRE_EVENT: { id: 'FIRE_EVENT', colorHex: "#e67e22", labelText: "Fire Alert", responderText: "ISU Cluj en route to the scene." }
 };
 
 // A KAMERÁK KÖZPONTI LISTÁJA (4 darab zöld pont)
@@ -23,8 +23,8 @@ export const CAMERAS = [
 
 function App() {
   const [logs, setLogs] = useState([
-    { id: 1, type: 'fire', time: '22:14:05', location: 'Smart_Camera_1', message: 'Fire / Smoke detected', title: 'Heavy Smoke Near Containers', description: 'The AI vision model detected thick smoke and rapid temperature increase near the waste containers. Probability: 94%.', image: null },
-    { id: 2, type: 'police', time: '23:01:22', location: 'Smart_Camera_1', message: 'Police intervention required', title: 'Physical Altercation', description: 'Multiple individuals identified in aggressive physical contact. Potential weapon detected.', image: null }
+    { id: 1, type: 'FIRE_EVENT', time: '22:14:05', location: 'Smart_Camera_1', message: 'Fire / Smoke detected', title: 'Heavy Smoke Near Containers', description: 'The AI vision model detected thick smoke and rapid temperature increase near the waste containers. Probability: 94%.', image: null },
+    { id: 2, type: 'POSSIBLE_ATTACK', time: '23:01:22', location: 'Smart_Camera_1', message: 'Police intervention required', title: 'Physical Altercation', description: 'Multiple individuals identified in aggressive physical contact. Potential weapon detected.', image: null }
   ]);
   
   const [activeAlert, setActiveAlert] = useState(null);
@@ -66,8 +66,7 @@ function App() {
     // HA VESZÉLY VAN
     if (incomingData.active === true && incomingData.event !== "NORMAL") {
       
-      const incomingAlertType = incomingData.event.toLowerCase(); // Pl. "POLICE" -> "police"
-
+      const incomingAlertType = incomingData.event.toUpperCase();
       setActiveAlert(prevAlert => {
         // Csak akkor hozunk létre új logot, ha ez egy ÚJ riasztás
         if (prevAlert !== incomingAlertType) {
