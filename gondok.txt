@@ -1,0 +1,11 @@
+Gondok
+
+A különbség egy ingyenes API-t használó kód és egy eladható szoftver között a megbízhatóságban és a skálázhatóságban van:
+1. Ingyenes limitációk: Az ingyenes API-k (pl. Google Gemini, Maps vagy ingyenes képfelismerők) általában percenként csak pár kérést engednek. Egy éles városi rendszernél, ahol 100 kamera küld másodpercenként 30 képkockát, az ingyenes kulcsod 1 másodperc alatt "meghalna".
+2. Szerzői jogok és adatvédelem (GDPR): Az ingyenes AI modelleknél a szolgáltató (pl. Google, OpenAI) gyakran kiköti, hogy az adatokat felhasználhatja tanításra. Egy rendőrségi/mentő rendszernél ez elképzelhetetlen biztonsági kockázat.
+3. Téves riasztások (False Positives): Ha az ingyenes AI egy részeg embert "haldoklónak" lát, és ráhívja a rohammentőt feleslegesen, ki fizeti ki a kiszállást? A professzionális rendszerek ára a felelősségvállalásban van.
+4. Public Trust (Közbizalom): Sokan "Big Brother" technológiaként tekinthetnek rá. Ha a lakosság úgy érzi, hogy megfigyelik őket, politikai ellenállásba ütközhet a projekt.
+5. Kitakarás): Egy tömegben, ha sokan állnak valaki előtt, aki épp rosszul van, a kamera nem látja az eseményt.
+6. Hálózati megbízhatóság): Ha elmegy az internet vagy szakadozik a Wi-Fi/5G, a biztonsági rendszer megszűnik létezni.
+7. "Who is to blame?" question: Ha a rendszer nem ismer fel egy gyilkosságot vagy egy szívrohamot, és valaki meghal, ki a felelős? A szoftverfejlesztő? A város? Az AI-t biztosító cég? Ez egy jogi ingovány.
+8. 
