@@ -222,7 +222,7 @@ def detect_event(boxes, frame):
 # MAIN LOOP
 # =========================
 def run():
-    cap = cv2.VideoCapture(RTSP_URL, cv2.CAP_FFMPEG)
+    cap = cv2.VideoCapture("http://192.168.54.252/stream")
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
     if not cap.isOpened():
