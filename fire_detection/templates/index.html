@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FireWatch AI — Live Detection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0a0b0d;
+    --panel:     #111318;
+    --border:    #1e2230;
+    --fire:      #ff4010;
+    --fire-glow: #ff6030;
+    --smoke:     #6b7280;
+    --safe:      #22c55e;
+    --warn:      #f59e0b;
+    --text:      #e2e8f0;
+    --muted:     #4b5563;
+    --mono:      'Share Tech Mono', monospace;
+    --head:      'Barlow Condensed', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    font-family: var(--head);
+    font-weight: 800;
+    font-size: 1.5rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .logo span { color: var(--fire); }
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    transition: all 0.3s;
+  }
+  .status-badge.safe   { border-color: var(--safe);  color: var(--safe); }
+  .status-badge.danger { border-color: var(--fire);  color: var(--fire);
+                         box-shadow: 0 0 12px var(--fire); animation: pulse-border 0.8s infinite; }
+  @keyframes pulse-border {
+    0%,100% { box-shadow: 0 0 8px var(--fire); }
+    50%      { box-shadow: 0 0 20px var(--fire-glow); }
+  }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: currentColor;
+  }
+  .dot.blink { animation: blink 0.7s infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .fps-indicator {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  /* ── Layout ── */
+  .main-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    grid-template-rows: auto 1fr;
+    gap: 0;
+    max-height: calc(100vh - 60px);
+  }
+
+  /* ── Video panel ── */
+  .video-wrap {
+    grid-row: 1 / 3;
+    position: relative;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .video-wrap img {
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+  }
+  .scanline {
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 3px, rgba(0,0,0,0.04) 3px, rgba(0,0,0,0.04) 4px
+    );
+    pointer-events: none;
+  }
+  .corner {
+    position: absolute;
+    width: 22px; height: 22px;
+    border-color: var(--muted);
+    border-style: solid;
+    opacity: 0.5;
+  }
+  .corner.tl { top:12px;    left:12px;    border-width: 2px 0 0 2px; }
+  .corner.tr { top:12px;    right:12px;   border-width: 2px 2px 0 0; }
+  .corner.bl { bottom:12px; left:12px;    border-width: 0 0 2px 2px; }
+  .corner.br { bottom:12px; right:12px;   border-width: 0 2px 2px 0; }
+
+  .alert-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 40, 0, 0.08);
+    border: 2px solid var(--fire);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+    animation: none;
+  }
+  .alert-overlay.active {
+    opacity: 1;
+    animation: flicker 0.5s infinite;
+  }
+  @keyframes flicker {
+    0%,100% { opacity: 0.9; }
+    50%      { opacity: 0.4; }
+  }
+
+  .cam-label {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  /* ── Right column ── */
+  .right-col {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Stats row ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    border-bottom: 1px solid var(--border);
+  }
+  .stat-card {
+    padding: 18px 16px;
+    border-right: 1px solid var(--border);
+    text-align: center;
+  }
+  .stat-card:last-child { border-right: none; }
+  .stat-val {
+    font-family: var(--head);
+    font-weight: 800;
+    font-size: 2rem;
+    line-height: 1;
+    color: var(--fire);
+  }
+  .stat-val.smoke { color: var(--smoke); }
+  .stat-val.frames { color: var(--warn); font-size: 1.6rem; }
+  .stat-lbl {
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* ── Detections live ── */
+  .section-head {
+    font-family: var(--head);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 10px 16px 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .live-dets {
+    padding: 10px 14px;
+    min-height: 90px;
+    border-bottom: 1px solid var(--border);
+  }
+  .det-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 8px;
+    margin-bottom: 4px;
+    border-left: 3px solid var(--border);
+    font-size: 0.78rem;
+    transition: all 0.2s;
+  }
+  .det-item.fire  { border-color: var(--fire);  background: rgba(255,64,16,0.07); }
+  .det-item.smoke { border-color: var(--smoke); background: rgba(107,114,128,0.08); }
+  .det-conf {
+    font-size: 0.7rem;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+  .no-dets {
+    font-size: 0.75rem;
+    color: var(--muted);
+    padding: 16px 0;
+    text-align: center;
+  }
+
+  /* ── Alert log ── */
+  .alert-log {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 14px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .alert-log::-webkit-scrollbar { width: 4px; }
+  .alert-log::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .alert-entry {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(30,34,48,0.6);
+    font-size: 0.72rem;
+    opacity: 0;
+    transform: translateX(10px);
+    animation: slide-in 0.3s forwards;
+  }
+  @keyframes slide-in {
+    to { opacity: 1; transform: none; }
+  }
+  .alert-time { color: var(--muted); white-space: nowrap; }
+  .alert-type-fire  { color: var(--fire); }
+  .alert-type-smoke { color: var(--smoke); }
+  .alert-conf { color: var(--warn); margin-left: auto; white-space: nowrap; }
+
+  .empty-log {
+    color: var(--muted);
+    font-size: 0.72rem;
+    text-align: center;
+    padding: 24px 0;
+  }
+
+  /* ── Confidence bar ── */
+  .conf-bar-wrap {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+  }
+  .conf-bar-lbl {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+  .conf-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .conf-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--fire), var(--fire-glow));
+    border-radius: 2px;
+    transition: width 0.4s;
+    width: 0%;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span>Fire</span>Watch<span style="color:var(--muted);font-weight:300"> // </span>AI</div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <span class="fps-indicator" id="fps-lbl">-- FPS</span>
+    <div class="status-badge safe" id="status-badge">
+      <div class="dot" id="status-dot"></div>
+      <span id="status-text">ALL CLEAR</span>
+    </div>
+  </div>
+</header>
+
+<div class="main-grid">
+
+  <!-- Video -->
+  <div class="video-wrap">
+    <div class="scanline"></div>
+    <div class="corner tl"></div><div class="corner tr"></div>
+    <div class="corner bl"></div><div class="corner br"></div>
+    <div class="alert-overlay" id="alert-overlay"></div>
+    <div class="cam-label" id="cam-label">CAM-01 · LIVE</div>
+    <img src="/video_feed" id="video-stream" alt="Live feed">
+  </div>
+
+  <!-- Right column -->
+  <div class="right-col">
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-val" id="stat-fire">0</div>
+        <div class="stat-lbl">Fire Frames</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val smoke" id="stat-smoke">0</div>
+        <div class="stat-lbl">Smoke Frames</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val frames" id="stat-frames">0</div>
+        <div class="stat-lbl">Total Frames</div>
+      </div>
+    </div>
+
+    <div class="section-head">Live Detections</div>
+    <div class="live-dets" id="live-dets">
+      <div class="no-dets">Awaiting detections …</div>
+    </div>
+
+    <div class="section-head">Alert Log</div>
+    <div class="alert-log" id="alert-log">
+      <div class="empty-log" id="empty-log">No alerts recorded yet.</div>
+    </div>
+
+    <div class="conf-bar-wrap">
+      <div class="conf-bar-lbl">
+        <span>Max Confidence</span>
+        <span id="conf-pct">0%</span>
+      </div>
+      <div class="conf-bar">
+        <div class="conf-fill" id="conf-fill"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let knownAlerts = [];
+
+  async function poll() {
+    try {
+      const r = await fetch("/api/state");
+      const d = await r.json();
+
+      // Stats
+      document.getElementById("stat-fire").textContent   = d.stats.fire;
+      document.getElementById("stat-smoke").textContent  = d.stats.smoke;
+      document.getElementById("stat-frames").textContent = d.stats.total_frames;
+      document.getElementById("fps-lbl").textContent     = d.stats.fps + " FPS";
+
+      // Status badge
+      const badge = document.getElementById("status-badge");
+      const dot   = document.getElementById("status-dot");
+      const txt   = document.getElementById("status-text");
+      const overlay = document.getElementById("alert-overlay");
+
+      if (d.alert) {
+        badge.className = "status-badge danger";
+        dot.className   = "dot blink";
+        txt.textContent = "⚠  DANGER DETECTED";
+        overlay.classList.add("active");
+      } else {
+        badge.className = "status-badge safe";
+        dot.className   = "dot";
+        txt.textContent = "ALL CLEAR";
+        overlay.classList.remove("active");
+      }
+
+      // Live detections
+      const ld = document.getElementById("live-dets");
+      if (d.dets && d.dets.length > 0) {
+        let maxConf = 0;
+        ld.innerHTML = d.dets.map(det => {
+          if (det.conf > maxConf) maxConf = det.conf;
+          return `<div class="det-item ${det.kind}">
+            <span>${det.label.toUpperCase()}</span>
+            <span class="det-conf">${(det.conf*100).toFixed(1)}%</span>
+          </div>`;
+        }).join("");
+        const pct = Math.round(maxConf * 100);
+        document.getElementById("conf-fill").style.width = pct + "%";
+        document.getElementById("conf-pct").textContent  = pct + "%";
+      } else {
+        ld.innerHTML = '<div class="no-dets">No detections in current frame</div>';
+        document.getElementById("conf-fill").style.width = "0%";
+        document.getElementById("conf-pct").textContent  = "0%";
+      }
+
+      // Alert log — only prepend new items
+      const logEl = document.getElementById("alert-log");
+      const empty  = document.getElementById("empty-log");
+      const newAlerts = d.alerts.filter(a =>
+        !knownAlerts.some(k => k.time === a.time && k.type === a.type)
+      );
+      if (newAlerts.length > 0) {
+        if (empty) empty.remove();
+        newAlerts.forEach(a => {
+          const isSmoke = a.type.includes("SMOKE");
+          const el = document.createElement("div");
+          el.className = "alert-entry";
+          el.innerHTML = `
+            <span class="alert-time">${a.time}</span>
+            <span class="${isSmoke ? 'alert-type-smoke' : 'alert-type-fire'}">${a.type}</span>
+            <span class="alert-conf">${Math.round(a.conf*100)}%</span>
+          `;
+          logEl.prepend(el);
+        });
+        knownAlerts = d.alerts;
+      }
+
+    } catch(e) { /* server not yet ready */ }
+  }
+
+  poll();
+  setInterval(poll, 800);
+</script>
+</body>
+</html>
