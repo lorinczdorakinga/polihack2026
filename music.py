@@ -2,7 +2,7 @@ import serial
 import time
 
 # Update to your correct port
-ser = serial.Serial('/dev/ttyUSB0', 115200) 
+ser = serial.Serial('/dev/ttyUSB1', 115200) 
 time.sleep(2)
 
 with open("output.raw", "rb") as f:

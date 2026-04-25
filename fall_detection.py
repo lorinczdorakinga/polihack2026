@@ -5,348 +5,205 @@ import cv2
 import json
 import base64
 import threading
+import numpy as np
 from ultralytics import YOLO
 
+PANIC_SPEED_THRESHOLD = 400    # Pixels per second to be considered "running"
+PANIC_PEOPLE_COUNT = 5
+
 # =========================
-# CLEAN LOGGING
+# CLEAN LOGGING & SETUP
 # =========================
 os.environ["YOLO_VERBOSE"] = "False"
 logging.getLogger("ultralytics").setLevel(logging.ERROR)
 
-# =========================
-# CONFIG
-# =========================
-MODEL_PATH = "yolov8n.pt"
-STREAM_URL = "http://192.168.54.252/stream"
-CAMERA_ID = "cam_1"
+# --- CONFIGURATION ---
+MODEL_PATH = "yolov8n-pose.pt"
+STREAM_URL = 2                 
+CAMERA_ID = "cam_01"
 
-FALL_RATIO_THRESHOLD = 1.2
-FALL_TIME_THRESHOLD = 2
-
-MOVEMENT_THRESHOLD = 150
-ATTACK_TIME_THRESHOLD = 1.5
+# --- THRESHOLDS ---
+FALL_TIME_THRESHOLD = 2.0      
+PROXIMITY_THRESHOLD = 150      # Pixel distance for two people to be "engaged"
+STRIKE_DISTANCE = 60           # Pixel distance for a wrist hitting a head/body
+FIGHT_FRAME_LIMIT = 5          # Number of consecutive frames to confirm a fight
 
 # =========================
-# GLOBAL FRAME BUFFER
-# =========================
-latest_frame = None
-frame_lock = threading.Lock()
-
-# =========================
-# STATES
+# STATE TRACKING
 # =========================
 class PersonState:
     def __init__(self):
-        self.last_state = "standing"
-        self.last_time = time.time()
-
-class MotionState:
-    def __init__(self):
-        self.last_box = None
-        self.attack_start = None
-
-person_state = {}
-motion_state = {}
-
+        self.state = "standing"
+        self.start_time = time.time()
+        # New attributes for velocity tracking
+        self.last_pos = None
+        self.last_pos_time = time.time()
+        self.current_speed = 0.0
+person_db = {}
+latest_frame = None
+frame_lock = threading.Lock()
 last_saved_event = None
 
-model = YOLO(MODEL_PATH, verbose=False)
+# Global counter to filter out quick, accidental overlaps (like a hug)
+fight_alert_counter = 0  
+
+model = YOLO(MODEL_PATH)
 
 # =========================
-# CAPTURE THREAD (REAL FIX)
+# CAPTURE THREAD
 # =========================
 def capture_thread():
     global latest_frame
-
-    cap = cv2.VideoCapture(STREAM_URL, cv2.CAP_FFMPEG)
-    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-
+    cap = cv2.VideoCapture(STREAM_URL)
+    
     while True:
         ret, frame = cap.read()
-
-        if not ret or frame is None:
-            # try to recover instead of dying
-            cap.release()
-            time.sleep(0.5)
-            cap = cv2.VideoCapture(STREAM_URL, cv2.CAP_FFMPEG)
-            continue
-
+        if not ret:
+            if isinstance(STREAM_URL, str): 
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                continue
+            break
+            
         with frame_lock:
             latest_frame = frame
+    cap.release()
 
 # =========================
-# ENCODE
+# UTILITIES
 # =========================
 def encode_frame(frame):
     _, buffer = cv2.imencode(".jpg", frame)
     return base64.b64encode(buffer).decode("utf-8")
 
-# =========================
-# SAVE EVENT
-# =========================
 def save_event(event, value, frame):
     global last_saved_event
-
-    if event == last_saved_event:
+    if event == last_saved_event and event == "NORMAL":
         return
-
+    
     last_saved_event = event
-
     data = {
         "camera_id": CAMERA_ID,
         "event": event,
-        "active": event != "NORMAL",
+        "severity": "CRITICAL" if event == "FIGHT_DETECTED" else ("HIGH" if event != "NORMAL" else "INFO"),
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
-        "people": value,
+        "count": value,
         "image": encode_frame(frame) if event != "NORMAL" else None
     }
-
-    with open("event.json", "w") as f:
+    with open("emergency_log.json", "w") as f:
         json.dump(data, f, indent=4)
 
 # =========================
-# YOLO
+# POSE LOGIC ENGINE
 # =========================
-def get_people(frame):
-    results = model(frame)
-    boxes = []
-
-    for r in results[0].boxes:
-        cls = int(r.cls[0])
-        if model.names[cls] == "person":
-            boxes.append(r.xyxy[0].tolist())
-
-    return boxes, results[0]
-
-# =========================
-# FALL
-# =========================
-def is_fall(box):
-    x1, y1, x2, y2 = box
-    w = x2 - x1
-    h = y2 - y1
-    if h == 0:
-        return False
-    return (w / h) > FALL_RATIO_THRESHOLD
-
-# =========================
-# FIRE
-# =========================
-def is_fire(frame):
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(hsv, (5, 150, 150), (25, 255, 255))
-    ratio = cv2.countNonZero(mask) / (frame.shape[0] * frame.shape[1])
-    return ratio > 0.06
-
-# =========================
-# BETTER ATTACK DETECTION
-# =========================
-
-def get_center(box):
-    x1, y1, x2, y2 = box
-    return ((x1 + x2) / 2, (y1 + y2) / 2)
-
-
-def distance(b1, b2):
-    c1 = get_center(b1)
-    c2 = get_center(b2)
-    return ((c1[0] - c2[0])**2 + (c1[1] - c2[1])**2) ** 0.5
-
-
-def is_duplicate(box1, box2):
-    x1, y1, x2, y2 = box1
-    X1, Y1, X2, Y2 = box2
-
-    overlap_x = max(0, min(x2, X2) - max(x1, X1))
-    overlap_y = max(0, min(y2, Y2) - max(y1, Y1))
-    overlap_area = overlap_x * overlap_y
-
-    area1 = (x2 - x1) * (y2 - y1)
-    area2 = (X2 - X1) * (Y2 - Y1)
-
-    if overlap_area > 0.7 * min(area1, area2):
-        return True
-    return False
-
-# =========================
-# EVENT ENGINE
-# =========================
-def detect_event(boxes, frame):
-    global person_state, motion_state
-
+def process_poses(results):
+    global person_db, fight_alert_counter
     now = time.time()
+    
+    if not results[0].keypoints or results[0].boxes.id is None:
+        fight_alert_counter = max(0, fight_alert_counter - 1)
+        return "NORMAL", 0
 
-    # =========================
-    # 🧹 REMOVE DUPLICATES
-    # =========================
-    filtered = []
-    for box in boxes:
-        duplicate = False
-        for f in filtered:
-            if is_duplicate(box, f):
-                duplicate = True
-                break
-        if not duplicate:
-            filtered.append(box)
+    kpts_all = results[0].keypoints.xy.cpu().numpy()
+    # Get tracking IDs assigned by YOLO
+    track_ids = results[0].boxes.id.int().cpu().tolist() 
+    
+    fall_detected = 0
+    theft_detected = 0
+    running_people_count = 0
+    current_frame_is_fight = False
 
-    boxes = filtered
+    for i, kpts in enumerate(kpts_all):
+        if np.sum(kpts) == 0: continue
+        
+        # Use YOLO's tracking ID instead of a random list index
+        pid = f"person_{track_ids[i]}"
+        
+        if pid not in person_db:
+            person_db[pid] = PersonState()
+        ps = person_db[pid]
 
-    fall_count = 0
-    interaction_score = 0
-    wide_people = 0
-    low_motion_people = 0
-    same_direction_count = 0
-
-    # =========================
-    # PER PERSON ANALYSIS
-    # =========================
-    for i, box in enumerate(boxes):
-        pid = f"p{i}"
-
-        if pid not in person_state:
-            person_state[pid] = PersonState()
-        if pid not in motion_state:
-            motion_state[pid] = MotionState()
-
-        pstate = person_state[pid]
-        mstate = motion_state[pid]
-
-        x1, y1, x2, y2 = box
-        w = x2 - x1
-        h = y2 - y1
-
-        ratio = w / h if h != 0 else 0
-
-        # =====================
-        # FALL DETECTION
-        # =====================
-        if ratio > FALL_RATIO_THRESHOLD:
-            if pstate.last_state == "falling":
-                if now - pstate.last_time > FALL_TIME_THRESHOLD:
-                    fall_count += 1
+        nose = kpts[0]
+        
+        # --- 1. VELOCITY / PANIC DETECTION ---
+        if nose[0] > 0 and nose[1] > 0: # If nose is visible
+            current_pos = np.array([nose[0], nose[1]])
+            
+            if ps.last_pos is not None:
+                time_diff = now - ps.last_pos_time
+                if time_diff > 0.1: # Recalculate speed every 0.1 seconds to avoid jitter
+                    distance = np.linalg.norm(current_pos - ps.last_pos)
+                    ps.current_speed = distance / time_diff
+                    ps.last_pos = current_pos
+                    ps.last_pos_time = now
             else:
-                pstate.last_state = "falling"
-                pstate.last_time = now
-        else:
-            pstate.last_state = "standing"
-            pstate.last_time = now
+                ps.last_pos = current_pos
+                ps.last_pos_time = now
 
-        # =====================
-        # LOW MOTION (bus stop filter)
-        # =====================
-        if mstate.last_box is not None:
-            dx = abs(box[0] - mstate.last_box[0])
-            dy = abs(box[1] - mstate.last_box[1])
+            # Count how many people are running
+            if ps.current_speed > PANIC_SPEED_THRESHOLD:
+                running_people_count += 1
 
-            if dx + dy < 20:
-                low_motion_people += 1
+        # --- (KEEP YOUR EXISTING FALL DETECTION HERE) ---
+        # --- (KEEP YOUR EXISTING THEFT DETECTION HERE) ---
 
-        # =====================
-        # SAVE LAST BOX
-        # =====================
-        mstate.last_box = box
+    # --- (KEEP YOUR EXISTING FIGHT DETECTION HERE) ---
+    # *Note: update the fight logic to use track_ids if you want specific person-to-person tracking*
 
-        # =====================
-        # WIDE BODY (fight posture)
-        # =====================
-        if h > 0 and (w / h) > 0.8:
-            wide_people += 1
-
-    # =========================
-    # INTERACTION (DISTANCE)
-    # =========================
-    for i in range(len(boxes)):
-        for j in range(i + 1, len(boxes)):
-            d = distance(boxes[i], boxes[j])
-
-            if d < 150:
-                interaction_score += 1
-
-            # SAME DIRECTION (runner filter)
-            pid1 = f"p{i}"
-            pid2 = f"p{j}"
-
-            if pid1 in motion_state and pid2 in motion_state:
-                b1 = motion_state[pid1].last_box
-                b2 = motion_state[pid2].last_box
-
-                if b1 and b2:
-                    dx1 = boxes[i][0] - b1[0]
-                    dy1 = boxes[i][1] - b1[1]
-
-                    dx2 = boxes[j][0] - b2[0]
-                    dy2 = boxes[j][1] - b2[1]
-
-                    if abs(dx1 - dx2) < 20 and abs(dy1 - dy2) < 20:
-                        same_direction_count += 1
-
-    # =========================
-    # FIRE CHECK
-    # =========================
-    fire = is_fire(frame)
-
-    # =========================
-    # SMART FILTERS
-    # =========================
-    # runners / same direction
-    if same_direction_count >= 2:
-        return "NORMAL", 0
-
-    # crowded but static
-    if len(boxes) > 0 and low_motion_people >= len(boxes) * 0.7:
-        return "NORMAL", 0
-
-    # =========================
-    # FINAL DECISION
-    # =========================
-    if fire:
-        return "FIRE_EVENT", 1
-    elif fall_count > 0:
-        return "HEALTH_EMERGENCY", fall_count
-    elif interaction_score >= 2 and wide_people >= 1:
-        return "POSSIBLE_ATTACK", interaction_score
-    else:
-        return "NORMAL", 0
-
-# =========================
-# MAIN LOOP (PROCESS THREAD)
+    # --- DECISION TREE ---
+    if running_people_count >= PANIC_PEOPLE_COUNT:
+        return "PANICDETECTED", running_people_count
+    elif theft_detected > 0:
+        return "THEFT_DETECTED", theft_detected
+    elif fight_alert_counter >= FIGHT_FRAME_LIMIT:
+        return "FIGHT_DETECTED", fight_alert_counter
+    elif fall_detected > 0:
+        return "HEALTH_EMERGENCY", fall_detected
+    
+    return "NORMAL", 0# =========================
+# MAIN EXECUTION
 # =========================
 def run():
-    # start capture thread
-    t = threading.Thread(target=capture_thread, daemon=True)
-    t.start()
-
-    print("🚀 REAL-TIME SYSTEM RUNNING (NO FREEZE MODE)")
+    threading.Thread(target=capture_thread, daemon=True).start()
+    print(f"👁️ Security System Active on {CAMERA_ID}...")
 
     while True:
         with frame_lock:
-            if latest_frame is None:
-                continue
+            if latest_frame is None: continue
             frame = latest_frame.copy()
 
-        boxes, yolo_result = get_people(frame)
-        event, value = detect_event(boxes, frame)
+        # Run YOLO Pose (conf=0.6 filters out ghost limbs)
+        # Inside your run() function loop:
 
-        save_event(event, value, frame)
+        # Replace this:
+        # results = model.predict(frame, verbose=False, conf=0.6)
+        
+        # With this:
+        # persist=True tells YOLO to remember IDs between frames
+        results = model.track(frame, persist=True, verbose=False, conf=0.6)
+        
+        event, val = process_poses(results)
+        save_event(event, val, frame)
 
-        annotated = yolo_result.plot()
+        annotated_frame = results[0].plot() 
+        
+        # UI Styling based on event
+        if event == "FIGHT_DETECTED":
+            color = (0, 0, 255) # Red for Fight
+        elif event == "HEALTH_EMERGENCY":
+            color = (0, 165, 255) # Orange for Fall
+        else:
+            color = (0, 255, 0) # Green for Normal
 
-        cv2.putText(annotated, f"People: {len(boxes)}", (20, 40),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        cv2.rectangle(annotated_frame, (0,0), (frame.shape[1], 60), (30,30,30), -1)
+        cv2.putText(annotated_frame, f"SYSTEM: {event}", (20, 40), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, color, 3)
 
-        cv2.putText(annotated, f"EVENT: {event}", (20, 80),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
-
-        if event != "NORMAL":
-            print(f"🚨 {event} | value={value}")
-
-        cv2.imshow("Smart Emergency System", annotated)
-
-        if cv2.waitKey(1) == 27:
+        cv2.imshow("AI Security Monitor", annotated_frame)
+        
+        if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
     cv2.destroyAllWindows()
 
-# =========================
 if __name__ == "__main__":
     run()
