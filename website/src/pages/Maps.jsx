@@ -1,22 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { GoogleMap, useLoadScript, MarkerF, InfoWindowF, CircleF } from '@react-google-maps/api';
 import { ALERT_TYPES, CAMERAS } from '../App'; 
+import configData from '../resources/config.json'; // ÚJ: A JSON fájl beolvasása
 import './Maps.css';
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAKGpw5JBe1ZMrS6L2VYSahX29pvnYOKLs";
 
-const AUTHORITIES = [
-  { id: 'pol_1', type: 'police', name: 'Poliția Municipiului', lat: 46.7758, lng: 23.5855, address: 'Str. Decebal 26' },
-  { id: 'pol_2', type: 'police', name: 'Secția 1 Poliție', lat: 46.7664, lng: 23.5815, address: 'Str. Clinicilor' },
-  { id: 'pol_3', type: 'police', name: 'Secția 2 Poliție', lat: 46.7709, lng: 23.6190, address: 'Str. Albac 15' },
-  { id: 'pol_4', type: 'police', name: 'Secția 3 Poliție', lat: 46.7645, lng: 23.6058, address: 'Str. Septimiu Albini' },
-  { id: 'amb_1', type: 'ambulance', name: 'Ambulanța Cluj', lat: 46.7785, lng: 23.5866, address: 'Str. Horea 40' },
-  { id: 'amb_2', type: 'ambulance', name: 'UPU SMURD', lat: 46.7669, lng: 23.5828, address: 'Str. Clinicilor 3-5' },
-  { id: 'fire_1', type: 'fire', name: 'ISU Cluj (Főkapitányság)', lat: 46.7735, lng: 23.6015, address: 'B-dul 21 Decembrie 1989' },
-  { id: 'fire_2', type: 'fire', name: 'Detașamentul 2 Pompieri', lat: 46.7544, lng: 23.5558, address: 'Mănăștur / Colina' }
-];
-
-const mapCenter = { lat: 46.7700, lng: 23.5900 };
+const { ALERT_TYPES, CAMERAS, AUTHORITIES, MAP_CENTER } = configData;
 
 const mapStyles = [
   { elementType: "geometry", stylers: [{ color: "#212121" }] },
@@ -27,7 +17,6 @@ const mapStyles = [
   { featureType: "water", elementType: "geometry", stylers: [{ color: "#000000" }] },
 ];
 
-// JAVÍTVA: Visszakapták a fizikai állomások a megfelelő kulcsokat
 const ICONS = {
   police: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
   ambulance: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
