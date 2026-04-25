@@ -13,17 +13,17 @@ export default function ControlPanel({ activeAlert, onSimulate, onCancel, alertT
           {/* Ezt a sort cseréltük le: */}
           <div className="btn-container">
             <button 
-              onClick={() => onSimulate('police')}
+              onClick={() => onSimulate('POSSIBLE_ATTACK')}
               className="btn-alert-type btn-alert-police"
             >Police</button>
             <button 
-              onClick={() => onSimulate('ambulance')}
+              onClick={() => onSimulate('HEALTH_EMERGENCY')}
               className="btn-alert-type btn-alert-amb"
             >Ambulance</button>
             <button 
-              onClick={() => onSimulate('fire')}
+              onClick={() => onSimulate('FIRE_EVENT')}
               className="btn-alert-type btn-alert-fire"
-            >Fire Departure</button>
+            >Fire Dept</button>
           </div>
         </div>
       ) : (
@@ -37,7 +37,7 @@ export default function ControlPanel({ activeAlert, onSimulate, onCancel, alertT
 
       {activeAlert && (
         <div className="status-bar alert" style={{ borderColor: alertTypes[activeAlert].colorHex, color: alertTypes[activeAlert].colorHex }}>
-          ⚠️ INCIDENT: Responding unit: {activeAlert === 'police' ? 'Poliția' : activeAlert === 'ambulance' ? 'UPU SMURD' : 'ISU Cluj'}
+          ⚠️ INCIDENT: Responding unit: {activeAlert === 'POSSIBLE_ATTACK' ? 'Poliția' : activeAlert === 'HEALTH_EMERGENCY' ? 'UPU SMURD' : 'ISU Cluj'}
         </div>
       )}
     </div>

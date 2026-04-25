@@ -70,9 +70,9 @@
   border-left: 5px solid gray;
   font-size: 14px;
 }
-.log-item.police { border-left-color: #0044cc; }
-.log-item.ambulance { border-left-color: #cc0000; }
-.log-item.fire { border-left-color: #e67e22; }
+.log-item.POSSIBLE_ATTACK { border-left-color: #0044cc; }
+.log-item.HEALTH_EMERGENCY { border-left-color: #cc0000; }
+.log-item.FIRE_EVENT { border-left-color: #e67e22; }
 
 .log-time {
   font-size: 12px;

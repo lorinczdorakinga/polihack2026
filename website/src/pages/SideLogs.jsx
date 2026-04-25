@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import './SideLogs.css';
 
-export default function SideLogs({ logs }) {
-  // A szűrő állapota: null (mindent mutat), 'police', 'ambulance', vagy 'fire'
+export default function SideLogs({ logs, onLogClick }) {
+  // A szűrő állapota: null (mindent mutat), 'POSSIBLE_ATTACK', 'HEALTH_EMERGENCY', vagy 'FIRE_EVENT'
   const [activeFilter, setActiveFilter] = useState(null);
 
-  // Ha rákattint egy gombra, beállítja a szűrőt. Ha ugyanarra kattint, kikapcsolja.
   const toggleFilter = (type) => {
     if (activeFilter === type) {
       setActiveFilter(null);
@@ -14,7 +13,6 @@ export default function SideLogs({ logs }) {
     }
   };
 
-  // Csak azokat a logokat mutatjuk, amik átmennek a szűrőn
   const filteredLogs = activeFilter 
     ? logs.filter(log => log.type === activeFilter) 
     : logs;
@@ -27,29 +25,36 @@ export default function SideLogs({ logs }) {
       
       <div className="logs-list">
         {filteredLogs.map(log => (
-          <div key={log.id} className={`log-item ${log.type}`}>
-            <div className="log-time">{log.time}</div>
-            <div className="log-location"><strong>Camera:</strong> {log.location}</div>
-            <div>{log.message}</div>
+          <div 
+            key={log.id} 
+            className={`log-item ${log.type}`}
+            onClick={() => onLogClick(log)} 
+            style={{ cursor: 'pointer' }} 
+          >
+            <div className="log-title">{log.title || 'Incident Report'}</div>
+            <div className="log-description">{log.description || 'The AI system detected an anomaly. Waiting for detailed description...'}</div>
           </div>
         ))}
       </div>
 
       <div className="filter-section">
+        {/* JAVÍTVA: A class név is POSSIBLE_ATTACK lett */}
         <button 
-          className={`filter-btn police ${activeFilter === 'police' ? 'active' : ''}`}
-          onClick={() => toggleFilter('police')}
-          title="Only Police Calls"
+          className={`filter-btn POSSIBLE_ATTACK ${activeFilter === 'POSSIBLE_ATTACK' ? 'active' : ''}`}
+          onClick={() => toggleFilter('POSSIBLE_ATTACK')}
+          title="Police alerts only"
         />
+        {/* JAVÍTVA: A class név is HEALTH_EMERGENCY lett */}
         <button 
-          className={`filter-btn ambulance ${activeFilter === 'ambulance' ? 'active' : ''}`}
-          onClick={() => toggleFilter('ambulance')}
-          title="Only Ambulance Calls"
+          className={`filter-btn HEALTH_EMERGENCY ${activeFilter === 'HEALTH_EMERGENCY' ? 'active' : ''}`}
+          onClick={() => toggleFilter('HEALTH_EMERGENCY')}
+          title="Ambulance alerts only"
         />
+        {/* JAVÍTVA: A class név is FIRE_EVENT lett */}
         <button 
-          className={`filter-btn fire ${activeFilter === 'fire department' ? 'active' : ''}`}
-          onClick={() => toggleFilter('fire department')}
-          title="Only Fire Department Calls"
+          className={`filter-btn FIRE_EVENT ${activeFilter === 'FIRE_EVENT' ? 'active' : ''}`}
+          onClick={() => toggleFilter('FIRE_EVENT')}
+          title="Fire alerts only"
         />
       </div>
     </div>

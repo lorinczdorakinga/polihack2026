@@ -1,7 +1,7 @@
 import React from 'react';
 import './PointLogs.css';
 
-export default function PointLogs({ camera, logs, onBack }) {
+export default function PointLogs({ camera, logs, onBack, onLogClick }) {
   // Kiszűrjük azokat a logokat, amik ennél a kameránál történtek
   const cameraLogs = logs.filter(log => log.location === camera.name);
 
@@ -33,9 +33,14 @@ export default function PointLogs({ camera, logs, onBack }) {
           <p style={{ color: '#888', fontSize: '14px', textAlign: 'center', marginTop: '20px' }}>No recent calls for this location.</p>
         ) : (
           cameraLogs.map(log => (
-            <div key={log.id} className={`log-item ${log.type}`}>
-              <div className="log-time">{log.time}</div>
-              <div>{log.message}</div>
+            <div 
+              key={log.id} 
+              className={`log-item ${log.type}`}
+              onClick={() => onLogClick(log)} /* <-- KATTINTÁS ESEMÉNY! */
+              style={{ cursor: 'pointer' }}
+            >
+              <div className="log-title">{log.title || 'Incident Report'}</div>
+              <div className="log-description">{log.description || 'The AI system detected an anomaly. Waiting for detailed description...'}</div>
             </div>
           ))
         )}
