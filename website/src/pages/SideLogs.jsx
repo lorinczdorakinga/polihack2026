@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './SideLogs.css';
 
-export default function SideLogs({ logs }) {
+export default function SideLogs({ logs, onLogClick }) {
   // A szűrő állapota: null (mindent mutat), 'police', 'ambulance', vagy 'fire'
   const [activeFilter, setActiveFilter] = useState(null);
 
@@ -27,10 +27,14 @@ export default function SideLogs({ logs }) {
       
       <div className="logs-list">
         {filteredLogs.map(log => (
-          <div key={log.id} className={`log-item ${log.type}`}>
-            <div className="log-time">{log.time}</div>
-            <div className="log-location"><strong>Camera:</strong> {log.location}</div>
-            <div>{log.message}</div>
+          <div 
+            key={log.id} 
+            className={`log-item ${log.type}`}
+            onClick={() => onLogClick(log)} /* <-- KATTINTÁS ESEMÉNY! */
+            style={{ cursor: 'pointer' }} /* <-- Egér ikon változtatása */
+          >
+            <div className="log-title">{log.title || 'Incident Report'}</div>
+            <div className="log-description">{log.description || 'The AI system detected an anomaly. Waiting for detailed description...'}</div>
           </div>
         ))}
       </div>
