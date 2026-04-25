@@ -8,9 +8,9 @@ import threading
 import numpy as np
 from ultralytics import YOLO
 
+# --- CONFIGURATION (Add these) ---
 PANIC_SPEED_THRESHOLD = 400    # Pixels per second to be considered "running"
-PANIC_PEOPLE_COUNT = 5
-
+PANIC_PEOPLE_COUNT = 2         # How many people need to run to trigger a panic
 # =========================
 # CLEAN LOGGING & SETUP
 # =========================
@@ -19,7 +19,7 @@ logging.getLogger("ultralytics").setLevel(logging.ERROR)
 
 # --- CONFIGURATION ---
 MODEL_PATH = "yolov8n-pose.pt"
-STREAM_URL = 2                 
+STREAM_URL = 0                 
 CAMERA_ID = "cam_01"
 
 # --- THRESHOLDS ---
@@ -38,7 +38,7 @@ class PersonState:
         # New attributes for velocity tracking
         self.last_pos = None
         self.last_pos_time = time.time()
-        self.current_speed = 0.0
+        self.current_speed = 0
 person_db = {}
 latest_frame = None
 frame_lock = threading.Lock()
@@ -151,7 +151,7 @@ def process_poses(results):
 
     # --- DECISION TREE ---
     if running_people_count >= PANIC_PEOPLE_COUNT:
-        return "PANICDETECTED", running_people_count
+        return "PANIC_DETECTED", running_people_count
     elif theft_detected > 0:
         return "THEFT_DETECTED", theft_detected
     elif fight_alert_counter >= FIGHT_FRAME_LIMIT:
@@ -172,14 +172,7 @@ def run():
             frame = latest_frame.copy()
 
         # Run YOLO Pose (conf=0.6 filters out ghost limbs)
-        # Inside your run() function loop:
-
-        # Replace this:
-        # results = model.predict(frame, verbose=False, conf=0.6)
-        
-        # With this:
-        # persist=True tells YOLO to remember IDs between frames
-        results = model.track(frame, persist=True, verbose=False, conf=0.6)
+        results = model.predict(frame, verbose=False, conf=0.6)
         
         event, val = process_poses(results)
         save_event(event, val, frame)
