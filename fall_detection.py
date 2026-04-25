@@ -139,15 +139,67 @@ def is_fire(frame):
     return ratio > 0.06
 
 # =========================
+# BETTER ATTACK DETECTION
+# =========================
+
+def get_center(box):
+    x1, y1, x2, y2 = box
+    return ((x1 + x2) / 2, (y1 + y2) / 2)
+
+
+def distance(b1, b2):
+    c1 = get_center(b1)
+    c2 = get_center(b2)
+    return ((c1[0] - c2[0])**2 + (c1[1] - c2[1])**2) ** 0.5
+
+
+def is_duplicate(box1, box2):
+    x1, y1, x2, y2 = box1
+    X1, Y1, X2, Y2 = box2
+
+    overlap_x = max(0, min(x2, X2) - max(x1, X1))
+    overlap_y = max(0, min(y2, Y2) - max(y1, Y1))
+    overlap_area = overlap_x * overlap_y
+
+    area1 = (x2 - x1) * (y2 - y1)
+    area2 = (X2 - X1) * (Y2 - Y1)
+
+    if overlap_area > 0.7 * min(area1, area2):
+        return True
+    return False
+
+# =========================
 # EVENT ENGINE
 # =========================
 def detect_event(boxes, frame):
     global person_state, motion_state
 
     now = time.time()
-    fall_count = 0
-    attack_count = 0
 
+    # =========================
+    # 🧹 REMOVE DUPLICATES
+    # =========================
+    filtered = []
+    for box in boxes:
+        duplicate = False
+        for f in filtered:
+            if is_duplicate(box, f):
+                duplicate = True
+                break
+        if not duplicate:
+            filtered.append(box)
+
+    boxes = filtered
+
+    fall_count = 0
+    interaction_score = 0
+    wide_people = 0
+    low_motion_people = 0
+    same_direction_count = 0
+
+    # =========================
+    # PER PERSON ANALYSIS
+    # =========================
     for i, box in enumerate(boxes):
         pid = f"p{i}"
 
@@ -162,9 +214,12 @@ def detect_event(boxes, frame):
         x1, y1, x2, y2 = box
         w = x2 - x1
         h = y2 - y1
+
         ratio = w / h if h != 0 else 0
 
-        # FALL
+        # =====================
+        # FALL DETECTION
+        # =====================
         if ratio > FALL_RATIO_THRESHOLD:
             if pstate.last_state == "falling":
                 if now - pstate.last_time > FALL_TIME_THRESHOLD:
@@ -176,36 +231,80 @@ def detect_event(boxes, frame):
             pstate.last_state = "standing"
             pstate.last_time = now
 
-        # ATTACK
+        # =====================
+        # LOW MOTION (bus stop filter)
+        # =====================
         if mstate.last_box is not None:
             dx = abs(box[0] - mstate.last_box[0])
             dy = abs(box[1] - mstate.last_box[1])
-            movement = dx + dy
 
-            if movement > MOVEMENT_THRESHOLD:
-                if mstate.attack_start is None:
-                    mstate.attack_start = now
-                elif now - mstate.attack_start > ATTACK_TIME_THRESHOLD:
-                    attack_count += 1
-            else:
-                mstate.attack_start = None
-        else:
-            mstate.attack_start = None
+            if dx + dy < 20:
+                low_motion_people += 1
 
+        # =====================
+        # SAVE LAST BOX
+        # =====================
         mstate.last_box = box
 
-    # FIRE
+        # =====================
+        # WIDE BODY (fight posture)
+        # =====================
+        if h > 0 and (w / h) > 0.8:
+            wide_people += 1
+
+    # =========================
+    # INTERACTION (DISTANCE)
+    # =========================
+    for i in range(len(boxes)):
+        for j in range(i + 1, len(boxes)):
+            d = distance(boxes[i], boxes[j])
+
+            if d < 150:
+                interaction_score += 1
+
+            # SAME DIRECTION (runner filter)
+            pid1 = f"p{i}"
+            pid2 = f"p{j}"
+
+            if pid1 in motion_state and pid2 in motion_state:
+                b1 = motion_state[pid1].last_box
+                b2 = motion_state[pid2].last_box
+
+                if b1 and b2:
+                    dx1 = boxes[i][0] - b1[0]
+                    dy1 = boxes[i][1] - b1[1]
+
+                    dx2 = boxes[j][0] - b2[0]
+                    dy2 = boxes[j][1] - b2[1]
+
+                    if abs(dx1 - dx2) < 20 and abs(dy1 - dy2) < 20:
+                        same_direction_count += 1
+
+    # =========================
+    # FIRE CHECK
+    # =========================
     fire = is_fire(frame)
 
-    if len(boxes) > 4:
-        attack_count = 0
+    # =========================
+    # SMART FILTERS
+    # =========================
+    # runners / same direction
+    if same_direction_count >= 2:
+        return "NORMAL", 0
 
+    # crowded but static
+    if len(boxes) > 0 and low_motion_people >= len(boxes) * 0.7:
+        return "NORMAL", 0
+
+    # =========================
+    # FINAL DECISION
+    # =========================
     if fire:
         return "FIRE_EVENT", 1
     elif fall_count > 0:
         return "HEALTH_EMERGENCY", fall_count
-    elif attack_count >= 3:
-        return "POSSIBLE_ATTACK", attack_count
+    elif interaction_score >= 2 and wide_people >= 1:
+        return "POSSIBLE_ATTACK", interaction_score
     else:
         return "NORMAL", 0
 
