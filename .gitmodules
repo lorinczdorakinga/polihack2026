@@ -1,0 +1,3 @@
+[submodule "esp32cam-rtsp"]
+	path = esp32cam-rtsp
+	url = https://github.com/rzeldent/esp32cam-rtsp.git
