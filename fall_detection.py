@@ -4,6 +4,8 @@ import logging
 import cv2
 import json
 import base64
+import threading
+from queue import Queue
 from ultralytics import YOLO
 # =========================
 # CLEAN LOGGING
@@ -219,67 +221,82 @@ def detect_event(boxes, frame):
         return "NORMAL", 0
 
 # =========================
-# MAIN LOOP
+# THREAD-SAFE STREAM READER
+# =========================
+class VideoStream:
+    def __init__(self, src):
+        self.cap = cv2.VideoCapture(src)
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        self.ret, self.frame = False, None
+        self.stopped = False
+        self.lock = threading.Lock()
+
+    def start(self):
+        t = threading.Thread(target=self.update, args=())
+        t.daemon = True
+        t.start()
+        return self
+
+    def update(self):
+        while not self.stopped:
+            ret, frame = self.cap.read()
+            with self.lock:
+                self.ret = ret
+                self.frame = frame
+            if not ret:
+                self.stop()
+
+    def read(self):
+        with self.lock:
+            return self.ret, self.frame
+
+    def stop(self):
+        self.stopped = True
+        self.cap.release()
+
+# =========================
+# MODIFIED RUN LOOP
 # =========================
 def run():
-    cap = cv2.VideoCapture("http://192.168.54.252/stream")
-    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+    # Use the threaded stream reader
+    stream = VideoStream("http://192.168.54.252/stream").start()
+    
+    # Wait a moment for the stream to initialize
+    time.sleep(1.0)
+    
+    print("✅ Multithreaded Emergency System Running...")
 
-    if not cap.isOpened():
-        print("❌ Cannot open stream")
-        return
-
-    print("✅ Smart Emergency System Running...")
-
-    while True:
-        ret, frame = cap.read()
+    while not stream.stopped:
+        ret, frame = stream.read()
 
         if not ret or frame is None:
-            print("⚠️ Frame not received")
             continue
 
+        # 1. AI Inference (This is the bottleneck, now isolated from capture)
         boxes = get_people(frame)
         event, value = detect_event(boxes, frame)
 
+        # 2. Disk I/O (Can be further threaded if JSON saving is slow)
         save_event(event, value, frame)
 
+        # 3. Visualization
         annotated = model(frame)[0].plot()
 
-        cv2.putText(
-            annotated,
-            f"People: {len(boxes)}",
-            (20, 40),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (0, 255, 0),
-            2
-        )
-
-        cv2.putText(
-            annotated,
-            f"EVENT: {event}",
-            (20, 80),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (0, 0, 255),
-            3
-        )
+        cv2.putText(annotated, f"People: {len(boxes)}", (20, 40),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        cv2.putText(annotated, f"EVENT: {event}", (20, 80),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
 
         if event != "NORMAL":
             print(f"🚨 {event} | value={value}")
-        else:
-            print(f"OK | people={len(boxes)}")
-
+        
         cv2.imshow("Smart Emergency System", annotated)
 
         if cv2.waitKey(1) == 27:
+            stream.stop()
             break
 
-    cap.release()
     cv2.destroyAllWindows()
 
-# =========================
-# RUN
-# =========================
 if __name__ == "__main__":
     run()
