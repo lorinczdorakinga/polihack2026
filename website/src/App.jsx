@@ -43,8 +43,9 @@ function App() {
             location: targetCam.name,
             message: `${ALERT_TYPES[incomingAlertType].labelText} (People detected: ${incomingData.people})`,
             title: `${ALERT_TYPES[incomingAlertType].labelText} Incident`,
-            description: "Automated AI trigger activated. No detailed visual analysis attached yet.",
-            image: incomingData.image_b64 ? `data:image/jpeg;base64,${incomingData.image_b64}` : null
+            description: "Automated AI trigger activated. Live feed is available below.",
+            image: incomingData.image_b64 ? `data:image/jpeg;base64,${incomingData.image_b64}` : null,
+            stream_url: incomingData.stream_url || null // <-- EZT ADJUK HOZZÁ
           };
           setLogs(prevLogs => [newLog, ...prevLogs]);
         }
@@ -71,7 +72,9 @@ function App() {
       message: ALERT_TYPES[type].labelText,
       title: `${ALERT_TYPES[type].labelText} Incident`, 
       description: `Automated AI trigger activated. No detailed visual analysis attached yet.`,
-      image: null
+      image: null,
+      stream_url: incomingData.stream_url || null ,// <-- EZT ADJUK HOZZÁ
+
     };
     setLogs(prevLogs => [newLog, ...prevLogs]);
   };
