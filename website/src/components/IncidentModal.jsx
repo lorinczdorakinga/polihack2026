@@ -79,7 +79,7 @@ export default function IncidentModal({ log, onClose, onUpdateStatus, sendMessag
                 src={log.stream_url} 
                 alt="Live Camera Feed" 
                 style={{ width: '100%', borderRadius: '6px', display: 'block' }}
-                onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/600x400?text=Camera+Offline"; }}
+                onError={(e) => { e.target.onerror = null; e.target.src = "http://192.168.145.55:8080/stream"; }}
               />
               <div className="live-tag">LIVE</div>
             </div>
