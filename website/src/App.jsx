@@ -11,10 +11,7 @@ import './App.css';
 const { ALERT_TYPES, CAMERAS } = configData;
 
 export default function App() {
-  const [logs, setLogs] = useState([
-    { id: 1, type: 'FIRE_EVENT', time: '22:14:05', location: 'Smart_Camera_1', message: 'Fire / Smoke detected', title: 'Heavy Smoke Near Containers', description: 'The AI vision model detected thick smoke and rapid temperature increase near the waste containers. Probability: 94%.', image: null, stream_url: CAMERAS[0].stream_url, status: 'pending' },
-    { id: 2, type: 'POSSIBLE_ATTACK', time: '23:01:22', location: 'Smart_Camera_1', message: 'Police intervention required', title: 'Physical Altercation', description: 'Multiple individuals identified in aggressive physical contact. Potential weapon detected.', image: null, stream_url: CAMERAS[0].stream_url, status: 'approved' }
-  ]);
+  const [logs, setLogs] = useState([]);
   
   const [activeAlert, setActiveAlert] = useState(null);
   const [alertedCamera, setAlertedCamera] = useState(null);

@@ -31,6 +31,7 @@ async def handle_connection(websocket):
                         # Kiküldjük a Reactnak a WebSocketen keresztül
                         await websocket.send(json.dumps(alert_data))
                         print("🚨 Új YOLO riasztás beolvasva és kiküldve a frontendnek!")
+                        print(f"📦 Tartalma: {alert_data}")
                         
                         last_mtime = current_mtime
             except Exception as e:
@@ -70,7 +71,6 @@ async def handle_connection(websocket):
                         "active": True,
                         "timestamp": int(time.time()),
                         "people": 2,
-                        "image_b64": "", 
                         "stream_url": "http://192.168.54.252/stream"
                     }
                     await websocket.send(json.dumps(alert_data))
