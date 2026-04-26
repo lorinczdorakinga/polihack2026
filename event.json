@@ -1,9 +1,0 @@
-{
-    "camera_id": "cam_1",
-    "event": "NORMAL",
-    "active": false,
-    "timestamp": "2026-04-26 11:08:06",
-    "people": 2,
-    "image_b64": "",
-    "stream_url": "http://127.0.0.1:5001/stream"
-}

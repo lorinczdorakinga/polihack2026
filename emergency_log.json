@@ -1,1 +1,8 @@
-{"camera_id": "cam_01", "event": "HEALTH_EMERGENCY", "severity": "HIGH", "timestamp": "2026-04-26T10:14:12", "count": 1, "image_path": "alerts/cam_01_HEALTH_EMERGENCY_20260426_101412.jpg"}
+{
+    "camera_id": "cam_1",
+    "event": "FIRE_EVENT",
+    "active": true,
+    "timestamp": "2026-04-26 15:46:14",
+    "people": 4,
+    "stream_url": "http://192.168.145.55:8080/stream"
+}

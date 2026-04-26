@@ -27,7 +27,7 @@ class FireDetector:
                 elif label in self.smoke_classes:
                     kind = "smoke"
                     if event != "FIRE_EVENT":
-                        event = "SMOKE_EVENT"
+                        event = "FIRE_EVENT"
                 
                 detections.append({
                     "label": label,

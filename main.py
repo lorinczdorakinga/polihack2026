@@ -15,7 +15,7 @@ from fall_detection import FallFightDetector
 # =========================
 # CONFIGURATION
 # =========================
-STREAM_URL = "http://127.0.0.1:5001/stream"
+STREAM_URL = "http://192.168.145.55:8080/stream"
 CAMERA_ID = "cam_1"
 OUTPUT_JSON = "emergency_log.json"
 
@@ -31,17 +31,17 @@ def encode_frame(frame):
     return base64.b64encode(buffer).decode("utf-8")
 
 def save_alert(event, people_count, frame, stream_url):
-    alert_data = {
-        "camera_id": CAMERA_ID,
-        "event": event,
-        "active": event != "NORMAL",
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "people": people_count,
-        "image_b64": encode_frame(frame) if event != "NORMAL" else "",
-        "stream_url": stream_url
+    if event!="NORMAL":
+        alert_data = {
+            "camera_id": CAMERA_ID,
+            "event": event,
+            "active": event != "NORMAL",
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "people": people_count,
+            "stream_url": STREAM_URL
     }
-    with open(OUTPUT_JSON, "w") as f:
-        json.dump(alert_data, f, indent=4)
+        with open(OUTPUT_JSON, "w") as f:
+            json.dump(alert_data, f, indent=4)
 
 def capture_thread(url):
     global latest_frame
@@ -86,7 +86,7 @@ def main():
         future_fall = executor.submit(fall_dev.detect, frame)
 
         fire_event, fire_dets = future_fire.result()
-        fall_event, people_count, pose_results = future_fall.result()
+        fall_event, people_count, pose_results  = future_fall.result()
 
         # Priority logic: Fire > Panic > Fight > Fall > Normal
         final_event = "NORMAL"

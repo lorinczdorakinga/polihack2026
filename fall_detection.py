@@ -33,7 +33,7 @@ class FallFightDetector:
         
         if not results[0].keypoints:
             self.fight_alert_counter = max(0, self.fight_alert_counter - 1)
-            return "NORMAL", 0
+            return "NORMAL", 0, results[0]
 
         kpts_all = results[0].keypoints.xy.cpu().numpy()
         track_ids = None
@@ -92,7 +92,7 @@ class FallFightDetector:
         # Decision
         final_event = "NORMAL"
         if running_people_count >= self.PANIC_PEOPLE_COUNT: final_event = "PANIC_DETECTED"
-        elif self.fight_alert_counter >= self.FIGHT_FRAME_LIMIT: final_event = "FIGHT_DETECTED"
+        elif self.fight_alert_counter >= self.FIGHT_FRAME_LIMIT: final_event = "POSSIBLE_ATTACK"
         elif fall_detected: final_event = "HEALTH_EMERGENCY"
         
         return final_event, people_count, results[0]
