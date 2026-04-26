@@ -25,7 +25,7 @@ logging.getLogger("ultralytics").setLevel(logging.ERROR)
 
 # --- CONFIGURATION ---
 MODEL_PATH = "yolov8n-pose.pt"
-STREAM_URL = 2                 
+STREAM_URL = "http://localhost:5001/stream"                 
 CAMERA_ID = "cam_01"
 
 # --- THRESHOLDS ---
@@ -102,6 +102,8 @@ def save_event(event, value, frame):
     
     # 3. SAVE IMAGE
     timestamp = time.strftime("%Y%m%d_%H%M%S")
+    if not os.path.exists("alerts"):
+        os.makedirs("alerts", exist_ok=True)
     img_path = f"alerts/{CAMERA_ID}_{event}_{timestamp}.jpg"
     cv2.imwrite(img_path, frame)
 
