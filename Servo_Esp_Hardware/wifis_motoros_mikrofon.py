@@ -3,7 +3,7 @@ import time
 import threading
 
 # Az az IP cim, amire az ESP csatlakozik a helyi hálózaton. Ezt a saját hálózatodnak megfelelően kell beállítani!
-ESP_IP = "http://192.168.54.204" 
+ESP_IP = "http://192.168.145.204" 
 
 def zaj_figyelo():
     print("[INFO] Zajfigyelés elindult a háttérben...")

@@ -33,6 +33,15 @@ export default function App() {
     setSelectedLogForModal(null);
   };
 
+  const handleMissionReturn = (logId) => {
+    setLogs(prevLogs => 
+      prevLogs.map(log => 
+        log.id === logId ? { ...log, active: false } : log
+      )
+    );
+    console.log(`✅ A bevetés lezárult, a jármű visszaindult. Log (${logId}) active: false`);
+  };
+
   useEffect(() => {
     if (!incomingData) return; 
     const targetCam = CAMERAS.find(cam => cam.id === incomingData.camera_id) || CAMERAS[0];
@@ -89,7 +98,8 @@ export default function App() {
       )}
       
       <div className="map-section">
-        <Maps logs={logs} activeAlert={activeAlert} alertedCamera={alertedCamera} onCameraClick={(camera) => setSelectedSidebarCamera(camera)} />
+        <Maps logs={logs} activeAlert={activeAlert} alertedCamera={alertedCamera} 
+        onCameraClick={(camera) => setSelectedSidebarCamera(camera)} onMissionReturn={handleMissionReturn} />
       </div>
 
       <ControlPanel 

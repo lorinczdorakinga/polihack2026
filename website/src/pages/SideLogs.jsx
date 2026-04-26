@@ -23,17 +23,38 @@ export default function SideLogs({ logs, onLogClick }) {
       </div>
       
       <div className="logs-list">
-        {filteredLogs.map(log => (
-          <div 
-            key={log.id} 
-            className={`log-item ${log.type} ${log.isNew ? 'new-alert' : ''}`}
-            onClick={() => onLogClick(log)} 
-            style={{ cursor: 'pointer' }} 
-          >
-            <div className="log-title">{log.title || 'Incident Report'}</div>
-            <div className="log-description">{log.description || 'The AI system detected an anomaly. Waiting for detailed description...'}</div>
-          </div>
-        ))}
+        {filteredLogs.map(log => {
+          
+          // --- BIZTONSÁGOS IDŐFELDOLGOZÓ ---
+          let logTime = "--:--:--";
+          if (log.timestamp) {
+            // Ha szám (a Python szerver küldte Unix másodpercként)
+            if (typeof log.timestamp === 'number') {
+              logTime = new Date(log.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            } 
+            // Ha szöveg (pl. régi beégetett tesztadatok vagy hibás YOLO JSON)
+            else {
+              const parsedDate = new Date(log.timestamp);
+              // Csak akkor írjuk ki, ha tényleg érvényes dátum
+              if (!isNaN(parsedDate.getTime())) {
+                logTime = parsedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+              }
+            }
+          }
+
+          return (
+            <div 
+              key={log.id} 
+              className={`log-item ${log.type} ${log.isNew ? 'new-alert' : ''}`}
+              onClick={() => onLogClick(log)} 
+              style={{ cursor: 'pointer' }} 
+            >
+              <div className="log-time">{logTime}</div>
+              <div className="log-title">{log.title || 'Incident Report'}</div>
+              <div className="log-description">{log.description || 'The AI system detected an anomaly. Waiting for detailed description...'}</div>
+            </div>
+          );
+        })}
       </div>
 
       <div className="filter-section">

@@ -23,11 +23,9 @@ export default function ControlPanel({ alertTypes, sendMessage, selectedCamera }
       <h3>Dispatcher Center</h3>
       
       <div className="status-indicator" style={{ marginBottom: '15px' }}>
-        Location: Cluj-Napoca<br/>
-        Status: <span style={{ color: '#4CAF50' }}>Standing By</span>
+        Location: Cluj-Napoca
       </div>
       
-      {/* Külön szekció a címnek, hogy ne nyomja szét a gombokat */}
       <div className="simulation-section">
         <p className="trigger-label">
           Trigger Event ({selectedCamera ? selectedCamera.name : 'cam_1'}):
