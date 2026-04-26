@@ -1,26 +1,43 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './IncidentModal.css';
 
-// Hozzáadtuk az onUpdateStatus prop-ot!
-export default function IncidentModal({ log, onClose, onUpdateStatus }) {
-  
+export default function IncidentModal({ log, onClose, onUpdateStatus, sendMessage }) {
+  const [angle, setAngle] = useState(90);
+
   if (!log) return null;
 
-  // A státuszt most már magából a log objektumból olvassuk ki
   const status = log.status || 'pending'; 
 
+  const handleMove = (direction) => {
+    let newAngle = angle;
+    if (direction === 'left') newAngle -= 15;
+    if (direction === 'right') newAngle += 15;
+    if (direction === 'center') newAngle = 90;
+    
+    if (newAngle < 0) newAngle = 0;
+    if (newAngle > 180) newAngle = 180;
+
+    setAngle(newAngle);
+
+    if (sendMessage) {
+      sendMessage({
+        action: "move_camera",
+        camera_id: log.camera_id || "cam_1",
+        angle: newAngle
+      });
+    } else {
+      console.warn("Nincs sendMessage prop átadva a Modalnak!");
+    }
+  };
+
   const handleApprove = () => {
-    // Frissítjük a fő listát az App.jsx-en keresztül
     onUpdateStatus(log.id, 'approved');
-    console.log(`Riasztás (${log.id}) megerősítve! Hatóságok indítása...`);
-    setTimeout(onClose, 1500);
+    onClose();
   };
 
   const handleDecline = () => {
-    // Frissítjük a fő listát az App.jsx-en keresztül
     onUpdateStatus(log.id, 'declined');
-    console.log(`Riasztás (${log.id}) elutasítva.`);
-    setTimeout(onClose, 1500);
+    onClose();
   };
 
   return (
@@ -40,53 +57,53 @@ export default function IncidentModal({ log, onClose, onUpdateStatus }) {
           {log.description || "Review the live footage below to verify the AI's detection."}
         </div>
 
-        <div className="modal-media-container" style={{ marginBottom: '20px' }}>
+        <div className="modal-media-container" style={{ marginBottom: '15px' }}>
           {log.stream_url ? (
             <div style={{ position: 'relative' }}>
               <img 
                 src={log.stream_url} 
                 alt="Live Camera Feed" 
-                style={{ width: '100%', borderRadius: '6px', border: '1px solid #444', display: 'block' }}
+                style={{ width: '100%', borderRadius: '6px', display: 'block' }}
                 onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/600x400?text=Camera+Offline"; }}
               />
-              <div style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: '#d32f2f', color: 'white', padding: '4px 10px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', boxShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                ● LIVE
-              </div>
+              <div className="live-tag">LIVE</div>
             </div>
           ) : log.image ? (
             <img src={log.image} alt="Incident snapshot" style={{ width: '100%', borderRadius: '6px' }} />
           ) : (
-            <div className="no-image-text" style={{ padding: '40px', textAlign: 'center', color: '#666', fontStyle: 'italic', backgroundColor: '#121212', borderRadius: '6px' }}>
+            <div className="no-image-text">
               * Waiting for visual evidence... *
             </div>
           )}
         </div>
 
-        {/* DISZPÉCSER DÖNTÉSI PANEL */}
+        <div className="camera-controls">
+          <p>PTZ Camera Control ({angle}°)</p>
+          <div className="control-buttons">
+            <button className="ptz-btn" onClick={() => handleMove('left')}> ◀ Left </button>
+            <button className="ptz-btn" onClick={() => handleMove('center')}> Center </button>
+            <button className="ptz-btn" onClick={() => handleMove('right')}> Right ▶ </button>
+          </div>
+        </div>
+
         {status === 'pending' && (
-          <div className="action-buttons" style={{ display: 'flex', gap: '15px' }}>
-            <button 
-              onClick={handleApprove}
-              style={{ flex: 1, padding: '15px', backgroundColor: '#d32f2f', color: 'white', border: 'none', borderRadius: '4px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' }}
-            >
+          <div className="action-buttons">
+            <button onClick={handleApprove} className="action-btn approve-btn">
               APPROVE (Dispatch Units)
             </button>
-            <button 
-              onClick={handleDecline}
-              style={{ flex: 1, padding: '15px', backgroundColor: '#333', color: 'white', border: '1px solid #555', borderRadius: '4px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' }}
-            >
+            <button onClick={handleDecline} className="action-btn decline-btn">
               DECLINE (False Alarm)
             </button>
           </div>
         )}
 
         {status === 'approved' && (
-          <div style={{ padding: '15px', backgroundColor: '#2e7d32', color: 'white', textAlign: 'center', borderRadius: '4px', fontWeight: 'bold' }}>
+          <div className="status-feedback approved-feedback">
             ✓ Units dispatched successfully.
           </div>
         )}
         {status === 'declined' && (
-          <div style={{ padding: '15px', backgroundColor: '#424242', color: '#aaa', textAlign: 'center', borderRadius: '4px', fontStyle: 'italic' }}>
+          <div className="status-feedback declined-feedback">
             ✕ Alert declined and logged as False Positive.
           </div>
         )}

@@ -11,18 +11,14 @@ import './App.css';
 const { ALERT_TYPES, CAMERAS } = configData;
 
 export default function App() {
-  const [logs, setLogs] = useState([
-    { id: 1, type: 'FIRE_EVENT', time: '22:14:05', location: 'Smart_Camera_1', message: 'Fire / Smoke detected', title: 'Heavy Smoke Near Containers', description: 'The AI vision model detected thick smoke and rapid temperature increase near the waste containers. Probability: 94%.', image: null, stream_url: CAMERAS[0].stream_url, status: 'pending' },
-    { id: 2, type: 'POSSIBLE_ATTACK', time: '23:01:22', location: 'Smart_Camera_1', message: 'Police intervention required', title: 'Physical Altercation', description: 'Multiple individuals identified in aggressive physical contact. Potential weapon detected.', image: null, stream_url: CAMERAS[0].stream_url, status: 'approved' }
-  ]);
+  const [logs, setLogs] = useState([]);
   
   const [activeAlert, setActiveAlert] = useState(null);
   const [alertedCamera, setAlertedCamera] = useState(null);
   const [selectedSidebarCamera, setSelectedSidebarCamera] = useState(null);
   const [selectedLogForModal, setSelectedLogForModal] = useState(null);
 
-  const { data: incomingData, isConnected } = useWebSocket('ws://localhost:8080');
-
+  const { data: incomingData, isConnected, sendMessage } = useWebSocket('ws://localhost:8080');
   // Hanglejátszó függvény áthelyezve a felső szintre
   const playAlertSound = () => {
     const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
@@ -34,7 +30,7 @@ export default function App() {
     setLogs(prevLogs => 
       prevLogs.map(log => log.id === logId ? { ...log, status: newStatus } : log)
     );
-    setSelectedLogForModal(prev => prev && prev.id === logId ? { ...prev, status: newStatus } : prev);
+    setSelectedLogForModal(null);
   };
 
   useEffect(() => {
@@ -75,39 +71,7 @@ export default function App() {
       setAlertedCamera(null);
     }
   }, [incomingData]);
-
-  const handleSimulateAlert = (type) => {
-    const targetCam = selectedSidebarCamera || CAMERAS[0]; 
-    setActiveAlert(type);
-    setAlertedCamera(targetCam);
-    playAlertSound();
     
-    const newLog = {
-      id: Date.now(),
-      type: type,
-      time: new Date().toLocaleTimeString('en-US', { hour12: false }),
-      location: targetCam.name,
-      message: ALERT_TYPES[type].labelText,
-      title: `${ALERT_TYPES[type].labelText} Incident`, 
-      description: `Automated AI trigger activated. No detailed visual analysis attached yet.`,
-      image: null,
-      stream_url: targetCam.stream_url,
-      status: 'pending',
-      isNew: true
-    };
-    
-    setLogs(prevLogs => [newLog, ...prevLogs]);
-
-    setTimeout(() => {
-      setLogs(currentLogs => currentLogs.map(l => l.id === newLog.id ? { ...l, isNew: false } : l));
-    }, 3000);
-  };
-
-  const handleCancelAlert = () => {
-    setActiveAlert(null);
-    setAlertedCamera(null);
-  };
-
   return (
     <div className="app-layout">
       {selectedSidebarCamera ? (
@@ -128,8 +92,11 @@ export default function App() {
         <Maps logs={logs} activeAlert={activeAlert} alertedCamera={alertedCamera} onCameraClick={(camera) => setSelectedSidebarCamera(camera)} />
       </div>
 
-      <ControlPanel activeAlert={activeAlert} onSimulate={handleSimulateAlert} onCancel={handleCancelAlert} alertTypes={ALERT_TYPES} />
-
+      <ControlPanel 
+        alertTypes={ALERT_TYPES} 
+        sendMessage={sendMessage} 
+        selectedCamera={selectedSidebarCamera} 
+      />
       <IncidentModal 
         log={selectedLogForModal} 
         onClose={() => setSelectedLogForModal(null)} 

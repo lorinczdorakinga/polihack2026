@@ -1,25 +1,54 @@
 .modal-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-color: rgba(0, 0, 0, 0.75); /* Sötétítő réteg */
-  z-index: 10000; /* Mindenek felett kell lennie */
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.8);
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .modal-content {
-  background-color: #1e1e1e;
-  color: white;
-  width: 600px;
-  max-width: 90vw;
-  border-radius: 8px;
-  padding: 30px;
+  background-color: rgba(20, 20, 20, 0.85); 
+  width: 90%;
+  max-width: 800px; /* <-- MEGSZÉLESÍTVE 600px-ről */
+  max-height: 90vh; /* <-- MAX MAGASSÁG (a képernyő 90%-a) */
+  overflow-y: auto; /* <-- GÖRGETHETŐ, ha nagyon sok a szöveg */
+  border-radius: 12px;
+  padding: 25px;
   position: relative;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  font-family: sans-serif;
-  max-height: 90vh;
-  overflow-y: auto; /* Ha túl hosszú a szöveg, lehessen görgetni */
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e0e0e0;
+  font-family: 'Inter', 'Roboto', 'Segoe UI', Helvetica, Arial, sans-serif;
+  animation: modal-fade-in 0.3s ease-out forwards;
+}
+
+.modal-content::-webkit-scrollbar {
+  width: 8px;
+}
+.modal-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2); 
+  border-radius: 8px;
+}
+.modal-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2); 
+  border-radius: 8px;
+}
+.modal-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4); 
+}
+
+
+
+@keyframes modal-fade-in {
+  from { opacity: 0; transform: translateY(20px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .close-btn {
@@ -27,69 +56,225 @@
   top: 15px;
   right: 15px;
   background: transparent;
-  border: 1px solid #555;
-  color: white;
-  font-size: 16px;
+  color: #666;
+  border: none;
+  font-size: 20px;
   cursor: pointer;
-  border-radius: 4px;
-  padding: 4px 10px;
-  transition: background-color 0.2s;
+  font-weight: bold;
+  transition: all 0.2s;
+  padding: 5px 10px;
+  border-radius: 50%;
 }
 
 .close-btn:hover {
-  background-color: #333;
+  color: white;
+  background-color: rgba(255,255,255,0.1);
 }
 
 .modal-title {
   margin-top: 0;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
   font-size: 24px;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
   border-bottom: 1px solid #333;
   padding-bottom: 10px;
 }
 
-/* Kategória jelvények (Badges) */
 .badges-container {
+  margin-bottom: 15px;
   display: flex;
   gap: 10px;
-  margin-bottom: 20px;
 }
 
+/* Jelvények stílusai összehangolva a gombok színátmeneteivel */
 .incident-badge {
-  padding: 5px 12px;
+  padding: 6px 12px;
   border-radius: 4px;
-  border: 1px solid;
-  font-weight: bold;
-  font-size: 13px;
+  font-size: 11px;
+  font-weight: 800;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: white;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
 }
 
-.incident-badge.police { color: #58a6ff; border-color: #58a6ff; }
-.incident-badge.ambulance { color: #ff7b72; border-color: #ff7b72; }
-.incident-badge.fire { color: #f0883e; border-color: #f0883e; }
+.incident-badge.police { background: linear-gradient(135deg, #003399, #0044cc); border: 1px solid #0055ff; }
+.incident-badge.ambulance { background: linear-gradient(135deg, #990000, #cc0000); border: 1px solid #ff1a1a; }
+.incident-badge.fire { background: linear-gradient(135deg, #b35f00, #e67e22); border: 1px solid #ff9f43; }
 
 .modal-description {
-  font-size: 16px;
-  line-height: 1.6;
-  color: #ccc;
+  font-size: 14px;
+  color: #bbb;
   margin-bottom: 20px;
+  line-height: 1.6;
 }
 
-.modal-image-container {
-  text-align: center;
-  background-color: #121212;
-  border: 1px solid #333;
+.modal-media-container {
+  margin-bottom: 15px;
+  background-color: #000; /* Fekete háttér a videónak */
   border-radius: 6px;
-  padding: 10px;
+  overflow: hidden; /* Ne lógjon ki a kerekítésből a videó */
+  border: 1px solid #444;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.5);
 }
 
-.modal-image-container img {
-  max-width: 100%;
+.modal-media-container img {
+  width: 100%;
+  max-height: 45vh; /* A videó nem lehet magasabb a képernyő felénél */
+  aspect-ratio: 16 / 9; /* Kényszerített szélesvásznú arány */
+  object-fit: cover; /* Kitölti a 16:9-es dobozt (levágja a kilógó széleket, nem torzít) */
+  display: block;
+}
+
+.live-tag {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #d32f2f;
+  color: white;
+  padding: 4px 10px;
   border-radius: 4px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  animation: pulse-red 1.5s infinite;
+}
+
+@keyframes pulse-red {
+  0% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(211, 47, 47, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0); }
 }
 
 .no-image-text {
-  color: #666;
   padding: 40px;
+  text-align: center;
+  color: #666;
   font-style: italic;
+  background-color: rgba(0,0,0,0.3);
+  border-radius: 6px;
+  border: 1px dashed #444;
+}
+
+/* --- KAMERA VEZÉRLŐ PANEL --- */
+.camera-controls {
+  margin-top: 15px;
+  padding: 15px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 8px;
+  border: 1px solid #333;
+  text-align: center;
+}
+
+.camera-controls p {
+  font-size: 11px;
+  color: #888;
+  margin: 0 0 12px 0;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-weight: bold;
+}
+
+.control-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.ptz-btn {
+  background: linear-gradient(135deg, #2a2a2a, #333);
+  border: 1px solid #444;
+  color: #e0e0e0;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+}
+
+.ptz-btn:hover {
+  background: linear-gradient(135deg, #3a3a3a, #4a4a4a);
+  border-color: #666;
+  color: white;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+}
+
+.ptz-btn:active {
+  transform: translateY(2px);
+}
+
+/* --- GOMBOK (APPROVE / DECLINE) --- */
+.action-buttons {
+  display: flex;
+  gap: 15px;
+  margin-top: 25px;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 15px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-transform: uppercase;
+}
+
+.approve-btn {
+  background: linear-gradient(135deg, #b30000, #e60000);
+  color: white;
+  border: 1px solid #ff3333;
+  box-shadow: 0 4px 15px rgba(230, 0, 0, 0.3);
+}
+
+.approve-btn:hover {
+  background: linear-gradient(135deg, #e60000, #ff4d4d);
+  box-shadow: 0 0 20px rgba(230, 0, 0, 0.6);
+  transform: translateY(-2px);
+}
+
+.decline-btn {
+  background: linear-gradient(135deg, #222, #333);
+  color: #ccc;
+  border: 1px solid #555;
+}
+
+.decline-btn:hover {
+  background: linear-gradient(135deg, #333, #444);
+  color: white;
+  border-color: #777;
+  transform: translateY(-2px);
+}
+
+.action-btn:active {
+  transform: translateY(1px);
+}
+
+/* --- VISSZAJELZÉSEK --- */
+.status-feedback {
+  padding: 15px;
+  text-align: center;
+  border-radius: 6px;
+  margin-top: 20px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+.approved-feedback {
+  background-color: rgba(46, 125, 50, 0.2);
+  border: 1px solid #2e7d32;
+  color: #81c784;
+}
+
+.declined-feedback {
+  background-color: rgba(66, 66, 66, 0.2);
+  border: 1px dashed #555;
+  color: #aaa;
 }

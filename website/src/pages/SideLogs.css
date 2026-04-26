@@ -7,7 +7,8 @@
   display: flex;
   flex-direction: column;
   color: white;
-  font-family: sans-serif;
+  /* Kőbe vésett, garantáltan modern betűtípus: */
+  font-family: 'Inter', 'Roboto', 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 .sidebar-header {
@@ -35,7 +36,6 @@
   font-size: 14px;
 }
 
-/* 1. JAVÍTÁS: A listaelemek bal oldali csíkja (Csak az újak) */
 .log-item.POSSIBLE_ATTACK { border-left-color: #0044cc; }
 .log-item.HEALTH_EMERGENCY { border-left-color: #cc0000; }
 .log-item.FIRE_EVENT { border-left-color: #e67e22; }
@@ -48,32 +48,78 @@
 
 .filter-section {
   padding: 15px;
-  background-color: #181818;
+  background-color: #121212; /* Kicsit sötétebb a kontraszt miatt */
   border-top: 1px solid #333;
   display: flex;
   gap: 10px;
-  height: 60px;
+  min-height: 70px;
 }
 
+/* KÖZÖS SZŰRŐ GOMB STÍLUS */
 .filter-btn {
   flex: 1;
-  border: 2px solid transparent;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
-  opacity: 0.5;
-  transition: all 0.2s;
+  font-weight: 800;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: white;
+  transition: all 0.2s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  
+  /* Alapból halványak, ha nincsenek kiválasztva */
+  opacity: 0.4; 
+  filter: grayscale(0.3);
 }
 
+.filter-btn:hover {
+  opacity: 0.8;
+  transform: translateY(-2px);
+  filter: grayscale(0);
+}
+
+/* Aktív állapot (ha rákattintott a diszpécser) */
 .filter-btn.active {
   opacity: 1;
-  border-color: white;
-  transform: scale(1.05);
+  transform: scale(1.02);
+  filter: grayscale(0);
+  border-color: rgba(255, 255, 255, 0.8);
 }
 
-/* 2. JAVÍTÁS: A szűrőgombok háttérszínei (Ezek hiányoztak) */
-.filter-btn.POSSIBLE_ATTACK { background-color: #0044cc; }
-.filter-btn.HEALTH_EMERGENCY { background-color: #cc0000; }
-.filter-btn.FIRE_EVENT { background-color: #e67e22; }
+.filter-btn:active {
+  transform: translateY(1px);
+}
+
+/* 1. ATTACK (POLICE) */
+.filter-btn.POSSIBLE_ATTACK {
+  background: linear-gradient(135deg, #003399, #0044cc);
+  box-shadow: 0 4px 10px rgba(0, 68, 204, 0.2);
+}
+.filter-btn.POSSIBLE_ATTACK.active, .filter-btn.POSSIBLE_ATTACK:hover {
+  box-shadow: 0 0 15px rgba(0, 68, 204, 0.6);
+}
+
+/* 2. HEALTH (AMBULANCE) */
+.filter-btn.HEALTH_EMERGENCY {
+  background: linear-gradient(135deg, #990000, #cc0000);
+  box-shadow: 0 4px 10px rgba(204, 0, 0, 0.2);
+}
+.filter-btn.HEALTH_EMERGENCY.active, .filter-btn.HEALTH_EMERGENCY:hover {
+  box-shadow: 0 0 15px rgba(204, 0, 0, 0.6);
+}
+
+/* 3. FIRE (TŰZOLTÓSÁG) */
+.filter-btn.FIRE_EVENT {
+  background: linear-gradient(135deg, #b35f00, #e67e22);
+  box-shadow: 0 4px 10px rgba(230, 126, 34, 0.2);
+}
+.filter-btn.FIRE_EVENT.active, .filter-btn.FIRE_EVENT:hover {
+  box-shadow: 0 0 15px rgba(230, 126, 34, 0.6);
+}
 
 @keyframes flash-highlight {
   0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
@@ -82,7 +128,7 @@
 }
 
 .log-item.new-alert {
-  animation: flash-highlight 3s ease-out; /* 3 másodperces lágy villogás */
+  animation: flash-highlight 3s ease-out;
   border: 1px solid transparent;
 }
 

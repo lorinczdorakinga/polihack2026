@@ -3,8 +3,16 @@ import { useState, useEffect, useRef } from 'react';
 export const useWebSocket = (url) => {
   const [data, setData] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
-  // useRef-ben tároljuk a kapcsolatot, hogy ne renderelődjön újra feleslegesen
   const ws = useRef(null); 
+
+  // Üzenetküldő függvény (React -> Python)
+  const sendMessage = (msg) => {
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      ws.current.send(JSON.stringify(msg));
+    } else {
+      console.warn("WebSocket nincs nyitva, nem lehetett elküldeni:", msg);
+    }
+  };
 
   useEffect(() => {
     let reconnectTimeout;
@@ -49,5 +57,6 @@ export const useWebSocket = (url) => {
     };
   }, [url]);
 
-  return { data, isConnected };
+  // Visszaadjuk a data és isConnected mellett a sendMessage-et is!
+  return { data, isConnected, sendMessage };
 };

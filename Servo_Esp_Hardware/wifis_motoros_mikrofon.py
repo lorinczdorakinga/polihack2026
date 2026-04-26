@@ -2,7 +2,7 @@ import requests
 import time
 import threading
 
-# Az IP címet az Arduino Serial Monitorról másold ki!
+# Az az IP cim, amire az ESP csatlakozik a helyi hálózaton. Ezt a saját hálózatodnak megfelelően kell beállítani!
 ESP_IP = "http://192.168.54.204" 
 
 def zaj_figyelo():

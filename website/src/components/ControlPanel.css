@@ -1,33 +1,146 @@
 .control-panel {
-  position: fixed; /* A LÉNYEG: A képernyőhöz rögzíti, függetlenül mindentől! */
+  position: fixed; 
   top: 20px;
   right: 20px;
-  z-index: 9999; /* Mindenek felett áll */
-  background-color: rgba(33, 33, 33, 0.9);
-  color: white;
+  z-index: 9999; 
+  background-color: rgba(20, 20, 20, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #e0e0e0;
   padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  border-radius: 12px;
+  border: 1px solid #333;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
   width: 320px;
   max-width: 90vw;
-  font-family: sans-serif;
+  /* Kőbe vésett, garantáltan modern betűtípus: */
+  font-family: 'Inter', 'Roboto', 'Segoe UI', Helvetica, Arial, sans-serif;
   box-sizing: border-box;
 }
 
-.control-panel h3 { margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px; }
-.simulation-controls span { font-size: 14px; color: #ccc; }
-.btn-container { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
-.simulation-controls button { padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; transition: opacity 0.3s; }
-.simulation-controls button:hover { opacity: 0.8; }
-.btn-alert-type { flex: 1 1 auto; font-size: 12px; padding: 8px !important; min-width: 80px; }
-.btn-alert-police { background-color: #0044cc; }
-.btn-alert-amb { background-color: #cc0000; }
-.btn-alert-fire { background-color: #e67e22; }
-.btn-alert-on { width: 100%; margin-top: 10px; background-color: #333; border: 1px solid #777 !important; animation: pulse 1s infinite; }
-.status-bar { margin-top: 15px; padding: 10px; border-radius: 4px; font-size: 13px; font-weight: bold; text-align: center; background-color: rgba(0, 0, 0, 0.5); border: 2px solid transparent; }
+.control-panel h3 { 
+  margin: 0 0 15px 0; 
+  border-bottom: 1px solid #444; 
+  padding-bottom: 10px; 
+  font-size: 18px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
 
-@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+.status-indicator {
+  font-size: 14px;
+  line-height: 1.6;
+  background: #111;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #222;
+}
+
+.simulation-section {
+  margin-top: 20px;
+}
+
+.trigger-label {
+  font-size: 12px;
+  color: #888;
+  text-transform: uppercase;
+  margin: 0 0 10px 0;
+  letter-spacing: 0.5px;
+  font-weight: bold;
+}
+
+.simulate-buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+
+/* KÖZÖS GOMB STÍLUS - Megnövelt méretekkel */
+.sim-btn { 
+  flex: 1;
+  min-height: 48px; /* Garantáltan nem lesz lapos */
+  padding: 10px 5px; /* Kényelmesebb belső tér */
+  border-radius: 6px; 
+  cursor: pointer; 
+  font-weight: 800; /* Vastagabb betűk a jobb olvashatóságért */
+  font-size: 13px; /* Kicsit nagyobb szöveg */
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: white; 
+  transition: all 0.2s ease-in-out; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 1. ATTACK (POLICE) - Kék */
+.sim-btn.attack { 
+  background: linear-gradient(135deg, #003399, #0044cc);
+  box-shadow: 0 4px 10px rgba(0, 68, 204, 0.2);
+  border: 1px solid #0055ff;
+}
+.sim-btn.attack:hover { 
+  background: linear-gradient(135deg, #0044cc, #0055ff);
+  box-shadow: 0 0 15px rgba(0, 68, 204, 0.6);
+  transform: translateY(-2px);
+}
+
+/* 2. HEALTH (AMBULANCE) - Piros */
+.sim-btn.health { 
+  background: linear-gradient(135deg, #990000, #cc0000);
+  box-shadow: 0 4px 10px rgba(204, 0, 0, 0.2);
+  border: 1px solid #ff1a1a;
+}
+.sim-btn.health:hover { 
+  background: linear-gradient(135deg, #cc0000, #ff1a1a);
+  box-shadow: 0 0 15px rgba(204, 0, 0, 0.6);
+  transform: translateY(-2px);
+}
+
+/* 3. FIRE (TŰZOLTÓSÁG) - Narancs */
+.sim-btn.fire { 
+  background: linear-gradient(135deg, #b35f00, #e67e22);
+  box-shadow: 0 4px 10px rgba(230, 126, 34, 0.2);
+  border: 1px solid #ff9f43;
+}
+.sim-btn.fire:hover { 
+  background: linear-gradient(135deg, #e67e22, #ff9f43);
+  box-shadow: 0 0 15px rgba(230, 126, 34, 0.6);
+  transform: translateY(-2px);
+}
+
+/* Gomb lenyomása */
+.sim-btn:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+/* AKCIÓ VISSZAJELZŐ SÁV (Ha épp kint van egy egység) */
+.responding-unit {
+  margin-top: 15px;
+  padding: 10px;
+  background: #111;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 13px;
+  text-align: center;
+  border: 1px dashed;
+  animation: pulse-border 1.5s infinite;
+}
+
+@keyframes pulse-border { 
+  0% { opacity: 0.7; } 
+  50% { opacity: 1; } 
+  100% { opacity: 0.7; } 
+}
 
 @media (max-width: 600px) {
-  .control-panel { top: 10px; right: 10px; left: 10px; width: calc(100% - 20px); max-width: none; padding: 15px; }
+  .control-panel { 
+    top: 10px; 
+    right: 10px; 
+    left: 10px; 
+    width: calc(100% - 20px); 
+    max-width: none; 
+    padding: 15px; 
+  }
 }
