@@ -10,8 +10,13 @@ from ultralytics import YOLO
 
 # --- CONFIGURATION (Add these) ---
 RESTRICTED_ZONE = [0, 0, 0, 0]
-PANIC_SPEED_THRESHOLD = 400    # Pixels per second to be considered "running"
 PANIC_PEOPLE_COUNT = 2         # How many people need to run to trigger a panic
+PROXIMITY_THRESHOLD = 300      # Increased from 150
+STRIKE_DISTANCE = 120          # Increased from 60
+FIGHT_FRAME_LIMIT = 2          # Decreased from 5
+PANIC_SPEED_THRESHOLD = 150    # Decreased from 400
+ALERT_COOLDOWN = 0.5  # Wait 5 seconds before logging the same event again
+event_cooldown_timers = {}
 # =========================
 # CLEAN LOGGING & SETUP
 # =========================
@@ -20,7 +25,7 @@ logging.getLogger("ultralytics").setLevel(logging.ERROR)
 
 # --- CONFIGURATION ---
 MODEL_PATH = "yolov8n-pose.pt"
-STREAM_URL = 0                 
+STREAM_URL = 2                 
 CAMERA_ID = "cam_01"
 
 # --- THRESHOLDS ---
@@ -77,23 +82,41 @@ def encode_frame(frame):
     return base64.b64encode(buffer).decode("utf-8")
 
 def save_event(event, value, frame):
-    global last_saved_event
-    if event == last_saved_event and event == "NORMAL":
-        return
+    global last_saved_event, event_cooldown_timers
     
+    # 1. ABSOLUTE BLOCK: If the event is NORMAL, exit the function immediately.
+    # It will never reach the file-writing code below.
+    if event == "NORMAL":
+        last_saved_event = event
+        return
+        
+    # 2. COOLDOWN CHECK
+    now = time.time()
+    last_alert_time = event_cooldown_timers.get(event, 0)
+    
+    if now - last_alert_time < ALERT_COOLDOWN:
+        return 
+        
+    event_cooldown_timers[event] = now
     last_saved_event = event
+    
+    # 3. SAVE IMAGE
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    img_path = f"alerts/{CAMERA_ID}_{event}_{timestamp}.jpg"
+    cv2.imwrite(img_path, frame)
+
+    # 4. WRITE TO LOG FILE
     data = {
         "camera_id": CAMERA_ID,
         "event": event,
-        "severity": "CRITICAL" if event == "FIGHT_DETECTED" else ("HIGH" if event != "NORMAL" else "INFO"),
+        "severity": "CRITICAL" if event == "FIGHT_DETECTED" else "HIGH",
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "count": value,
-        "image": encode_frame(frame) if event != "NORMAL" else None
+        "image_path": img_path
     }
+    
     with open("emergency_log.json", "w") as f:
-        json.dump(data, f, indent=4)
-
-# =========================
+        f.write(json.dumps(data) + "\n")
 # POSE LOGIC ENGINE
 # =========================
 def process_poses(results):

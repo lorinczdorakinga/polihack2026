@@ -1,8 +1,1 @@
-{
-    "camera_id": "cam_01",
-    "event": "NORMAL",
-    "severity": "INFO",
-    "timestamp": "2026-04-25T23:38:43",
-    "count": 0,
-    "image": null
-}
+{"camera_id": "cam_01", "event": "HEALTH_EMERGENCY", "severity": "HIGH", "timestamp": "2026-04-26T10:14:12", "count": 1, "image_path": "alerts/cam_01_HEALTH_EMERGENCY_20260426_101412.jpg"}
