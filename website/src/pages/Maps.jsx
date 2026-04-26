@@ -8,7 +8,7 @@ import './Maps.css';
 const GOOGLE_MAPS_API_KEY = "AIzaSyAyWSi2Y0tfwpe1phWxIBEAC8xV2WJ6jk4";
 const { CAMERAS, AUTHORITIES, MAP_CENTER } = configData;
 
-export default function Maps({ logs, activeAlert, alertedCamera, onCameraClick, onMissionReturn }) {
+export default function Maps({ logs, activeAlert, alertedCamera, onCameraClick, onMissionComplete }) {
   const [selectedPin, setSelectedPin] = useState(null);
   const [routeData, setRouteData] = useState({});
   const [infoPopup, setInfoPopup] = useState(null);
@@ -74,7 +74,7 @@ export default function Maps({ logs, activeAlert, alertedCamera, onCameraClick, 
 
   useEffect(() => {
     const interval = setInterval(() => {
-      let missionsToReturn = []; // Ide gyűjtjük azokat az autókat, amik épp most indulnak vissza
+      let missionsFinished = []; 
 
       setRouteData(prev => {
         let hasUpdates = false;
@@ -95,13 +95,16 @@ export default function Maps({ logs, activeAlert, alertedCamera, onCameraClick, 
             } else if (route.missionState === 'waiting') {
               if (Date.now() - route.waitTimer >= 10000) { 
                 route.missionState = 'returning';
-                missionsToReturn.push(id); // Eltesszük a listába, hogy szóltunk kell a Reactnek!
                 hasUpdates = true;
               }
               
             } else if (route.missionState === 'returning') {
               route.progress -= 0.005;
-              if (route.progress <= 0) delete nextData[id];
+              if (route.progress <= 0) {
+                // AUTÓ VISSZAÉRT!
+                missionsFinished.push(id); 
+                delete nextData[id]; 
+              }
               hasUpdates = true;
             }
           }
@@ -109,14 +112,14 @@ export default function Maps({ logs, activeAlert, alertedCamera, onCameraClick, 
         return hasUpdates ? nextData : prev;
       });
 
-      // Miután frissült az animáció, szólunk a fő alkalmazásnak, hogy az autók elhagyták a helyszínt:
-      if (missionsToReturn.length > 0 && onMissionReturn) {
-        missionsToReturn.forEach(id => onMissionReturn(id));
+      // Szólunk a fő alkalmazásnak, hogy a küldetés lezárult
+      if (missionsFinished.length > 0 && onMissionComplete) {
+        missionsFinished.forEach(id => onMissionComplete(id));
       }
 
     }, 50);
     return () => clearInterval(interval);
-  }, [onMissionReturn]);
+  }, [onMissionComplete]);
 
   // 3. ÉS 5. KÉRÉS: Vonalra kattintáskor InfoWindow + PointLog megnyitása
   const handleLineClick = (logId, data, latLng) => {

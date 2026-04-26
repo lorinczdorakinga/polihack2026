@@ -12,9 +12,13 @@ export default function SideLogs({ logs, onLogClick }) {
     }
   };
 
+  const activeAndValidLogs = logs.filter(log => 
+  log.status === 'pending' || log.status === 'approved'
+);
+
   const filteredLogs = activeFilter 
-    ? logs.filter(log => log.type === activeFilter) 
-    : logs;
+    ? activeAndValidLogs.filter(log => log.type === activeFilter) 
+    : activeAndValidLogs;
 
   return (
     <div className="sidebar-container">
@@ -25,22 +29,8 @@ export default function SideLogs({ logs, onLogClick }) {
       <div className="logs-list">
         {filteredLogs.map(log => {
           
-          // --- BIZTONSÁGOS IDŐFELDOLGOZÓ ---
-          let logTime = "--:--:--";
-          if (log.timestamp) {
-            // Ha szám (a Python szerver küldte Unix másodpercként)
-            if (typeof log.timestamp === 'number') {
-              logTime = new Date(log.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            } 
-            // Ha szöveg (pl. régi beégetett tesztadatok vagy hibás YOLO JSON)
-            else {
-              const parsedDate = new Date(log.timestamp);
-              // Csak akkor írjuk ki, ha tényleg érvényes dátum
-              if (!isNaN(parsedDate.getTime())) {
-                logTime = parsedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-              }
-            }
-          }
+          // Egyszerűen átvesszük a Python által formázott időt, vagy ha nincs, marad a kötőjel
+          const logTime = log.time_string || "--:--:--";
 
           return (
             <div 

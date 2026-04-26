@@ -12,18 +12,17 @@ const { ALERT_TYPES, CAMERAS } = configData;
 
 export default function App() {
   const [logs, setLogs] = useState([]);
-  
   const [activeAlert, setActiveAlert] = useState(null);
   const [alertedCamera, setAlertedCamera] = useState(null);
   const [selectedSidebarCamera, setSelectedSidebarCamera] = useState(null);
   const [selectedLogForModal, setSelectedLogForModal] = useState(null);
 
   const { data: incomingData, isConnected, sendMessage } = useWebSocket('ws://localhost:8080');
-  // Hanglejátszó függvény áthelyezve a felső szintre
+
   const playAlertSound = () => {
     const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
     audio.volume = 0.5;
-    audio.play().catch(e => console.log("A böngésző blokkolta a hangot:", e));
+    audio.play().catch(e => console.log("Sound blocked by browser"));
   };
 
   const handleUpdateLogStatus = (logId, newStatus) => {
@@ -33,13 +32,12 @@ export default function App() {
     setSelectedLogForModal(null);
   };
 
-  const handleMissionReturn = (logId) => {
+  // EZ A KULCS: Amikor az autó visszaér, 'completed' státuszra váltunk
+  const handleMissionComplete = (logId) => {
     setLogs(prevLogs => 
-      prevLogs.map(log => 
-        log.id === logId ? { ...log, active: false } : log
-      )
+      prevLogs.map(log => log.id === logId ? { ...log, status: 'completed' } : log)
     );
-    console.log(`✅ A bevetés lezárult, a jármű visszaindult. Log (${logId}) active: false`);
+    console.log(`✅ Mission finished. Log (${logId}) status: completed`);
   };
 
   useEffect(() => {
@@ -49,35 +47,35 @@ export default function App() {
     if (incomingData.active === true && incomingData.event !== "NORMAL") {
       const incomingAlertType = incomingData.event; 
 
-      setActiveAlert(prevAlert => {
-        if (prevAlert !== incomingAlertType) {
-          setAlertedCamera(targetCam);
-          playAlertSound(); 
+      setLogs(prevLogs => {
+        // Ellenőrizzük, hogy ez a konkrét riasztás (id alapján) már benne van-e
+        const isDuplicate = prevLogs.some(l => l.id === incomingData.timestamp);
+        if (isDuplicate) return prevLogs;
 
-          const newLog = {
-            id: incomingData.timestamp || Date.now(),
-            type: incomingAlertType,
-            time: new Date().toLocaleTimeString('en-US', { hour12: false }),
-            location: targetCam.name,
-            message: `${ALERT_TYPES[incomingAlertType].labelText} (People detected: ${incomingData.people})`,
-            title: `${ALERT_TYPES[incomingAlertType].labelText} Incident`,
-            description: "Automated AI trigger activated. Live feed is available below.",
-            image: incomingData.image_b64 ? `data:image/jpeg;base64,${incomingData.image_b64}` : null,
-            stream_url: incomingData.stream_url || targetCam.stream_url || null,
-            status: 'pending',
-            isNew: true 
-          };
-          setLogs(prevLogs => [newLog, ...prevLogs]);
+        // Ha új, akkor mehet a lista elejére
+        playAlertSound();
+        setAlertedCamera(targetCam);
+        setActiveAlert(incomingAlertType);
 
-          setTimeout(() => {
-            setLogs(currentLogs => currentLogs.map(l => l.id === newLog.id ? { ...l, isNew: false } : l));
-          }, 3000);
-        }
-        return incomingAlertType;
+        const newLog = {
+          id: incomingData.timestamp || Date.now(),
+          type: incomingAlertType,
+          time_string: incomingData.time_string,
+          location: targetCam.name,
+          title: `${ALERT_TYPES[incomingAlertType].labelText} Incident`,
+          description: "Automated AI trigger activated. Live feed is available below.",
+          image: incomingData.image_b64 ? `data:image/jpeg;base64,${incomingData.image_b64}` : null,
+          stream_url: incomingData.stream_url || targetCam.stream_url || null,
+          status: 'pending',
+          isNew: true 
+        };
+        
+        setTimeout(() => {
+          setLogs(currentLogs => currentLogs.map(l => l.id === newLog.id ? { ...l, isNew: false } : l));
+        }, 3000);
+
+        return [newLog, ...prevLogs];
       });
-    } else if (incomingData.active === false || incomingData.event === "NORMAL") {
-      setActiveAlert(null);
-      setAlertedCamera(null);
     }
   }, [incomingData]);
     
@@ -98,8 +96,13 @@ export default function App() {
       )}
       
       <div className="map-section">
-        <Maps logs={logs} activeAlert={activeAlert} alertedCamera={alertedCamera} 
-        onCameraClick={(camera) => setSelectedSidebarCamera(camera)} onMissionReturn={handleMissionReturn} />
+        <Maps 
+          logs={logs} 
+          activeAlert={activeAlert} 
+          alertedCamera={alertedCamera} 
+          onCameraClick={(camera) => setSelectedSidebarCamera(camera)} 
+          onMissionComplete={handleMissionComplete} 
+        />
       </div>
 
       <ControlPanel 
@@ -111,6 +114,7 @@ export default function App() {
         log={selectedLogForModal} 
         onClose={() => setSelectedLogForModal(null)} 
         onUpdateStatus={handleUpdateLogStatus}
+        sendMessage={sendMessage}
       />
     </div>
   );

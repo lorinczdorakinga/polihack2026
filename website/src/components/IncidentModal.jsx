@@ -4,29 +4,44 @@ import './IncidentModal.css';
 export default function IncidentModal({ log, onClose, onUpdateStatus, sendMessage }) {
   const [angle, setAngle] = useState(90);
 
+  // Az ESP32 IP címe a Python szkripted alapján
+  const ESP_IP = "http://192.168.145.204";
+
   if (!log) return null;
 
   const status = log.status || 'pending'; 
 
-  const handleMove = (direction) => {
+  const handleMove = async (direction) => {
     let newAngle = angle;
     if (direction === 'left') newAngle -= 15;
     if (direction === 'right') newAngle += 15;
     if (direction === 'center') newAngle = 90;
     
+    // Nem engedjük 0 alá és 180 fölé
     if (newAngle < 0) newAngle = 0;
     if (newAngle > 180) newAngle = 180;
 
     setAngle(newAngle);
 
+    // 1. Direkt HTTP kérés az ESP32-nek (a Python requests.get megfelelője)
+    try {
+      await fetch(`${ESP_IP}/set?angle=${newAngle}`, {
+        method: 'GET',
+        mode: 'no-cors' // Fontos: kikerüli a böngésző biztonsági blokkolását (CORS)
+      });
+      console.log(`[INFO] Parancs elküldve az ESP-nek: ${newAngle} fok`);
+    } catch (error) {
+      console.error("[HIBA] Nem sikerült elérni az ESP32-t:", error);
+    }
+
+    // 2. (Opcionális) Ha még a térképen is forgatni akarod a kameraikont, 
+    // meghagyhatjuk a WebSocket küldést is. Ha nem kell, ezt a részt törölheted.
     if (sendMessage) {
       sendMessage({
         action: "move_camera",
         camera_id: log.camera_id || "cam_1",
         angle: newAngle
       });
-    } else {
-      console.warn("Nincs sendMessage prop átadva a Modalnak!");
     }
   };
 
